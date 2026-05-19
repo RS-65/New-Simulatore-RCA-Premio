@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulatore RC AUTO Italia v2</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ac:#2563eb;--ac2:#16a34a;--ac3:#f59e0b;--ac4:#dc2626;--ac5:#7c3aed;
+  --bg:#f1f5f9;--card:#fff;--text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --border:#e2e8f0;
+  --warn-bg:#fffbeb;--warn-b:#d97706;
+  --info-bg:#eff6ff;--info-b:#2563eb;
+  --suc-bg:#f0fdf4;--suc-b:#16a34a;
+  --err-bg:#fef2f2;--err-b:#dc2626;
+}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+#app{max-width:1140px;margin:0 auto;padding:18px 16px}
+h1{font-size:22px;font-weight:700}
+h2{font-size:15px;font-weight:700;margin-bottom:8px}
+h3{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text2)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.g6{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+@media(max-width:700px){.g2,.g3,.g4,.g6{grid-template-columns:1fr}}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;text-align:center}
+.stat .val{font-size:18px;font-weight:700;color:var(--ac);line-height:1.2}
+.stat .lbl{font-size:11px;color:var(--text3);margin-top:2px}
+.stat.suc .val{color:var(--ac2)}.stat.warn .val{color:var(--warn-b)}.stat.neg .val{color:var(--ac4)}.stat.info .val{color:var(--ac5)}
+.callout{border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:10px;line-height:1.6}
+.callout.info{background:var(--info-bg);border-left:3px solid var(--info-b);color:#1e40af}
+.callout.warn{background:var(--warn-bg);border-left:3px solid var(--warn-b);color:#92400e}
+.callout.suc{background:var(--suc-bg);border-left:3px solid var(--suc-b);color:#14532d}
+.callout.err{background:var(--err-bg);border-left:3px solid var(--err-b);color:#7f1d1d}
+.callout.neut{background:#f1f5f9;border-left:3px solid #94a3b8;color:var(--text2)}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+/* Nav */
+.nav{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+.nav button,.sub-nav button{padding:6px 14px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--text2);font-size:13px;cursor:pointer;font-weight:500;transition:.13s}
+.nav button.active,.sub-nav button.active{border-color:var(--ac);background:var(--ac);color:#fff;font-weight:600}
+.nav button:not(.active):hover,.sub-nav button:not(.active):hover{border-color:var(--border);background:var(--bg)}
+.sub-nav{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.sub-nav button{font-size:12px;padding:4px 12px}
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+th{background:var(--bg);padding:6px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:5px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:#f8fafc}
+.tr-warn td{background:#fffbeb}
+.tr-star td{background:#eff6ff;font-weight:600}
+/* Sliders */
+.sl-wrap{margin-bottom:14px}
+.sl-label{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:3px}
+.sl-label .v{font-weight:700;color:var(--ac)}
+input[type=range]{width:100%;accent-color:var(--ac);cursor:pointer}
+.sl-limits{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:1px}
+/* Chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--text3);transition:.12s;user-select:none}
+.chip.on{border-color:var(--ac);color:var(--ac)}
+/* Buttons */
+.btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text2);font-size:12px;cursor:pointer;font-weight:500;transition:.12s}
+.btn:hover{border-color:var(--ac);color:var(--ac)}.btn.pri{background:var(--ac);color:#fff;border-color:var(--ac)}.btn.suc{background:var(--ac2);color:#fff;border-color:var(--ac2)}
+/* Charts */
+.chart-wrap{overflow-x:auto;margin-top:8px}.chart-wrap svg{display:block;max-width:100%}
+/* Tooltip */
+#tt{position:fixed;display:none;background:rgba(15,23,42,.93);color:#fff;padding:7px 11px;border-radius:7px;font-size:12px;pointer-events:none;z-index:9999;white-space:pre;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.hidden{display:none!important}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="row" style="margin-bottom:16px">
+    <h1>Simulatore RC AUTO Italia <span style="font-size:12px;background:var(--ac);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle;margin-left:6px">v2</span></h1>
+    <span style="font-size:11px;color:var(--text3);margin-left:4px">DB: 20260506_DB FREQUENCY PREMIO CLEAN_V01 · Mobility DB 2026</span>
+  </div>
+  <div class="nav" id="main-nav"></div>
+  <div id="content"></div>
+</div>
+<div id="tt"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════════
+const DATA = [
+  {anno:2015,inflazione:0.1, frequency:5.39, severity:4096,   premio:439.1, brent:52, paxKm:null,   carburante:1.43},
+  {anno:2016,inflazione:-0.1,frequency:5.57, severity:3986,   premio:419.7, brent:44, paxKm:1188.0, carburante:1.36},
+  {anno:2017,inflazione:1.1, frequency:5.43, severity:3975,   premio:416.9, brent:54, paxKm:null,   carburante:1.47},
+  {anno:2018,inflazione:1.1, frequency:5.26, severity:4003,   premio:414.8, brent:71, paxKm:1115.4, carburante:1.54},
+  {anno:2019,inflazione:0.5, frequency:5.20, severity:4002,   premio:403.5, brent:64, paxKm:1185.8, carburante:1.53},
+  {anno:2020,inflazione:-0.3,frequency:3.68, severity:4415,   premio:379.0, brent:42, paxKm:713.8,  carburante:1.37},
+  {anno:2021,inflazione:1.9, frequency:4.35, severity:4326,   premio:360.1, brent:71, paxKm:881.1,  carburante:1.57},
+  {anno:2022,inflazione:8.1, frequency:4.59, severity:4483,   premio:362.7, brent:101,paxKm:1074.4, carburante:1.82},
+  {anno:2023,inflazione:5.7, frequency:4.48, severity:4461,   premio:391.0, brent:83, paxKm:1047.0, carburante:1.83},
+  {anno:2024,inflazione:1.0, frequency:4.46, severity:4713,   premio:417.0, brent:81, paxKm:950.3,  carburante:1.76},
+  {anno:2025,inflazione:1.5, frequency:4.32, severity:4962.79,premio:431.8, brent:69, paxKm:null,   carburante:1.68},
+  {anno:2026,inflazione:1.5, frequency:null, severity:null,   premio:null,  brent:null,paxKm:null,  carburante:1.69},
+];
+const MOB_DATA = [
+  {y:2015,stock:37.35,paxIdx:100.0},{y:2016,stock:37.88,paxIdx:102.1},
+  {y:2017,stock:38.52,paxIdx:105.4},{y:2018,stock:39.02,paxIdx:102.3},
+  {y:2019,stock:39.55,paxIdx:103.2},{y:2020,stock:39.72,paxIdx:68.7},
+  {y:2021,stock:39.82,paxIdx:79.8}, {y:2022,stock:40.21,paxIdx:82.0},
+  {y:2023,stock:40.92,paxIdx:89.3}, {y:2024,stock:41.34,paxIdx:null},
+  {y:2025,stock:null, paxIdx:null},
+];
+const _AO_RAW = [
+  {y:2015,infl:0.001, freq:0.0539,      sev:4096,    prem:439.1,eur:0.00076},
+  {y:2016,infl:-0.001,freq:0.0557,      sev:3986,    prem:419.7,eur:-0.00132},
+  {y:2017,infl:0.011, freq:0.0543,      sev:3975,    prem:416.9,eur:-0.00318},
+  {y:2018,infl:0.011, freq:0.0526,      sev:4003,    prem:414.8,eur:-0.00329},
+  {y:2019,infl:0.005, freq:0.052,       sev:4002,    prem:403.5,eur:-0.0031},
+  {y:2020,infl:-0.003,freq:0.0368,      sev:4415,    prem:379.0,eur:-0.00379},
+  {y:2021,infl:0.019, freq:0.04350297,  sev:4326,    prem:360.1,eur:-0.00546},
+  {y:2022,infl:0.081, freq:0.0459,      sev:4483,    prem:362.7,eur:-0.0057},
+  {y:2023,infl:0.057, freq:0.0448,      sev:4461,    prem:391.0,eur:0.02162},
+  {y:2024,infl:0.01,  freq:0.04464703,  sev:4713,    prem:417.0,eur:0.03905},
+  {y:2025,infl:0.015, freq:0.04324925,  sev:4962.789,prem:431.8,eur:0.02736},
+  {y:2026,infl:0.015, freq:null,        sev:null,    prem:null, eur:0.02029},
+];
+const AO_DATA = _AO_RAW.map((d,i)=>({
+  y:d.y, infl:d.infl, freq:d.freq, sev:d.sev, prem:d.prem, eur:d.eur,
+  lc: d.freq!==null&&d.sev!==null?d.freq*d.sev:null,
+  lag1: i>0?_AO_RAW[i-1].prem:null,
+}));
+const AF_DATA = DATA.filter(d=>d.anno<=2025).map(d=>{
+  const mob=MOB_DATA.find(m=>m.y===d.anno);
+  return {y:d.anno,freq:d.frequency,pax:d.paxKm,carb:d.carburante,stock:mob?.stock??null,paxIdx:mob?.paxIdx??null};
+});
+const AO_MDEFS=[
+  {id:'A',n:'A — Tecnico puro',       vars:['lc'],              diag:false},
+  {id:'B',n:'B — Tecnico + inerzia',  vars:['lc','lag1'],       diag:false},
+  {id:'C',n:'C — LC + lag1 + EUR',    vars:['lc','lag1','eur'], diag:false,rec:true},
+  {id:'D',n:'D — F+S+lag1+EUR',       vars:['freq','sev','lag1','eur'],diag:false},
+  {id:'E',n:'E — Diagnostico infl.',  vars:['freq','sev','inflD','eur'],diag:true},
+];
+const AF_MDEFS=[
+  {id:'A',n:'A — PaxKm',            vars:['pax']},
+  {id:'B',n:'B — Carburante+PaxKm', vars:['carb','pax'],rec:true},
+  {id:'C',n:'C — PaxKm+Stock',      vars:['pax','stock']},
+  {id:'D',n:'D — PaxKm+Trasp/PIL',  vars:['pax','paxIdx']},
+  {id:'E',n:'E — Carb+Stock',       vars:['carb','stock']},
+];
+const AO_VLBL={freq:'Frequency',sev:'Severity',lc:'LossCost',lag1:'Premio lag1',eur:'EURIBOR 3M',inflD:'Inflazione'};
+const AF_VLBL={pax:'PaxKm (mln)',carb:'Carburante €/litro',stock:'Stock auto (mln)',paxIdx:'Trasporti/PIL idx'};
+// Regional
+const REG_YEARS=[2015,2016,2017,2018,2019,2020,2021,2022,2023];
+const REG_PREMIO_YEARS=[2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
+const REG_NAZ=[
+  {freq:5.39,sev:4096},{freq:5.57,sev:3986},{freq:5.43,sev:3975},
+  {freq:5.26,sev:4003},{freq:5.20,sev:4002},{freq:3.68,sev:4415},
+  {freq:4.35,sev:4326},{freq:4.59,sev:4483},{freq:4.48,sev:4461},
+];
+const REG={
+  'Abruzzo':         {freq:[5,5,5,5,5,3,4,4,4],sev:[1614,1606,1568,1588,1678,1639,1708,1839,1969]},
+  'Basilicata':      {freq:[4,4,4,4,4,3,3,3,3],sev:[1568,1748,1537,1673,1609,1617,1689,1779,1788]},
+  'Calabria':        {freq:[4,4,5,4,4,3,4,4,4],sev:[1930,1934,1939,1970,2063,1928,1987,2074,2086]},
+  'Campania':        {freq:[7,7,7,7,7,5,6,6,6],sev:[1864,1945,1942,1985,2024,1999,1993,2021,2067]},
+  'Emilia Romagna':  {freq:[5,5,5,5,5,3,4,4,4],sev:[1675,1717,1734,1799,1810,1822,1983,2009,2066]},
+  'Friuli-Venezia Giulia':{freq:[4,4,4,4,4,3,3,3,3],sev:[1616,1700,1677,1822,1824,1762,1812,1970,2029]},
+  'Lazio':           {freq:[7,7,7,6,6,5,5,6,5],sev:[1800,1805,1865,1949,1978,2094,2158,2291,2353]},
+  'Liguria':         {freq:[7,6,6,6,6,4,5,5,5],sev:[1646,1690,1728,1789,1800,1925,1936,2020,2125]},
+  'Lombardia':       {freq:[6,6,6,5,5,4,4,5,5],sev:[1554,1570,1587,1646,1694,1759,1811,1890,2005]},
+  'Marche':          {freq:[5,5,5,5,5,3,4,4,4],sev:[1889,1902,1917,1956,1981,2026,2060,2116,2200]},
+  'Molise':          {freq:[5,5,5,5,4,3,3,4,4],sev:[1430,1460,1398,1451,1666,1552,1548,1650,1890]},
+  'Piemonte':        {freq:[6,6,6,5,5,4,4,4,4],sev:[1655,1691,1733,1785,1843,1904,1948,1981,2103]},
+  'Puglia':          {freq:[5,5,5,5,5,4,4,4,4],sev:[1785,1778,1775,1819,1828,1848,1840,1879,1962]},
+  'Sardegna':        {freq:[6,5,5,5,5,4,5,5,5],sev:[1563,1593,1609,1669,1709,1778,1808,1928,2021]},
+  'Sicilia':         {freq:[6,6,6,6,6,4,5,5,5],sev:[1566,1610,1590,1578,1582,1607,1646,1711,1767]},
+  'Toscana':         {freq:[6,6,6,6,5,4,4,5,5],sev:[2069,2089,2095,2149,2170,2252,2272,2388,2496]},
+  'Trentino-Alto Adige':{freq:[4,4,4,4,4,3,3,3,3],sev:[1622,1666,1703,1850,1857,1908,1972,2152,2225]},
+  'Umbria':          {freq:[5,5,5,5,5,3,4,4,4],sev:[1770,1920,1858,1925,1967,2084,2063,2136,2282]},
+  "Valle d'Aosta":   {freq:[5,5,5,4,4,3,4,4,4],sev:[1593,1455,1501,1621,1731,1549,1576,1775,1906]},
+  'Veneto':          {freq:[5,5,4,4,4,3,4,4,4],sev:[1759,1808,1825,1828,1957,1984,2061,2173,2270]},
+};
+const REGIONS=Object.keys(REG).sort();
+const REG_PREMIO={
+  'Abruzzo':           [399,382,379,377,367,345,327,330.1,351.1,373,388.6],
+  'Basilicata':        [357,341,339,337,328,308,292,291,309.8,320.8,328.6],
+  'Calabria':          [434,415,412,410,399,375,356,345.7,363.8,377.2,392.2],
+  'Campania':          [573,548,544,542,527,495,470,462.7,489.7,523.8,531],
+  'Emilia Romagna':    [450,430,427,425,414,388,369,371.3,397.3,416.6,429.1],
+  'Friuli-Venezia Giulia':[354,339,336,335,326,306,291,297.5,321.5,338.3,349.5],
+  'Lazio':             [463,443,440,437,426,400,380,388.9,425.4,465.8,492.3],
+  'Liguria':           [464,443,440,438,426,400,380,384.5,414.4,441.2,453.6],
+  'Lombardia':         [404,386,384,382,371,349,331,336.7,367.6,391,408.4],
+  'Marche':            [449,429,426,424,412,387,368,370.1,396,417.7,429.1],
+  'Molise':            [363,347,345,343,333,313,298,300.9,321.3,335.6,342.4],
+  'Piemonte':          [414,396,393,391,381,357,340,344.4,375.6,401.8,416.1],
+  'Puglia':            [445,426,423,421,409,384,365,360.2,387.6,412.5,420.9],
+  'Sardegna':          [399,381,378,377,366,344,327,331.5,359.1,383.4,403.2],
+  'Sicilia':           [410,392,389,387,377,354,336,336.6,364.8,391.5,409.4],
+  'Toscana':           [499,477,474,472,459,431,410,414.1,446.8,474.1,485],
+  'Trentino-Alto Adige':[389,371,369,367,357,335,319,326.9,348,367.7,374.1],
+  'Umbria':            [431,412,409,407,396,372,353,354.8,382.6,406.6,417.5],
+  "Valle d'Aosta":     [348,332,330,328,319,300,285,292.7,317.7,339.1,352.5],
+  'Veneto':            [417,399,396,394,383,360,342,347.1,375.4,397.6,410.3],
+};
+const REG_PREMIO_NAZ=REG_PREMIO_YEARS.map(y=>{const d=DATA.find(r=>r.anno===y);return d?.premio??null;});
+
+// ═══════════════════════════════════════════════════════════════════════
+// MATH / OLS
+// ═══════════════════════════════════════════════════════════════════════
+function tr(M){return M[0].map((_,j)=>M.map(r=>r[j]))}
+function mm(A,B){const C=Array.from({length:A.length},()=>new Array(B[0].length).fill(0));for(let i=0;i<A.length;i++)for(let k=0;k<B.length;k++)for(let j=0;j<B[0].length;j++)C[i][j]+=A[i][k]*B[k][j];return C}
+function mv(M,v){return M.map(r=>r.reduce((s,x,j)=>s+x*v[j],0))}
+function minv(M){
+  const n=M.length,a=M.map((row,i)=>[...row,...Array.from({length:n},(_,j)=>+(i===j))]);
+  for(let c=0;c<n;c++){let p=c;for(let r=c+1;r<n;r++)if(Math.abs(a[r][c])>Math.abs(a[p][c]))p=r;[a[c],a[p]]=[a[p],a[c]];if(Math.abs(a[c][c])<1e-12)return null;for(let r=0;r<n;r++){if(r===c)continue;const fv=a[r][c]/a[c][c];for(let j=0;j<2*n;j++)a[r][j]-=fv*a[c][j]}const pv=a[c][c];for(let j=0;j<2*n;j++)a[c][j]/=pv}
+  return a.map(r=>r.slice(n));
+}
+function ols(X0,y){
+  const n=X0.length,p=X0[0]?.length??0;if(n<p+2)return null;
+  const X=X0.map(r=>[1,...r]),Xt=tr(X),iv=minv(mm(Xt,X));if(!iv)return null;
+  const b=mv(iv,mv(Xt,y)),yhat=X.map(r=>r.reduce((s,v,i)=>s+v*b[i],0));
+  const res=y.map((yi,i)=>yi-yhat[i]),ym=y.reduce((a,c)=>a+c)/n;
+  const ss=y.reduce((s,yi)=>s+(yi-ym)**2,0),sse=res.reduce((s,r)=>s+r**2,0);
+  const r2=ss<1e-12?1:1-sse/ss;
+  return{b,yhat,r2,r2a:1-(1-r2)*(n-1)/Math.max(n-p-1,1),rmse:Math.sqrt(sse/n),mae:res.reduce((s,r)=>s+Math.abs(r),0)/n,n,p,residuals:res};
+}
+function pcorr(x,y){
+  const n=x.length,mx=x.reduce((a,b)=>a+b)/n,my=y.reduce((a,b)=>a+b)/n;
+  const num=x.reduce((s,xi,i)=>s+(xi-mx)*(y[i]-my),0);
+  const den=Math.sqrt(x.reduce((s,xi)=>s+(xi-mx)**2,0)*y.reduce((s,yi)=>s+(yi-my)**2,0));
+  return den<1e-10?0:num/den;
+}
+function corrMat(cols){return cols.map(ci=>cols.map(cj=>pcorr(ci,cj)))}
+function calcVIF(X0){
+  return X0[0].map((_,j)=>{
+    const y=X0.map(r=>r[j]),X=X0.map(r=>r.filter((_,i)=>i!==j));
+    if(!X[0]?.length)return 1;const res=ols(X,y);if(!res)return 999;
+    return 1/Math.max(1-Math.min(res.r2,0.9999),1e-4);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MODEL HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+function aoGV(d,k){
+  if(k==='freq')return d.freq;if(k==='sev')return d.sev;if(k==='lc')return d.lc;
+  if(k==='lag1')return d.lag1;if(k==='eur')return d.eur;if(k==='inflD')return d.infl;
+  return null;
+}
+function afGV(d,k){
+  if(k==='pax')return d.pax;if(k==='carb')return d.carb;if(k==='stock')return d.stock;
+  if(k==='paxIdx')return d.paxIdx;return null;
+}
+function aoRunM(varKeys){
+  if(!varKeys.length)return null;
+  const rows=AO_DATA.filter(d=>d.prem!==null&&varKeys.every(k=>aoGV(d,k)!==null));
+  if(rows.length<varKeys.length+2)return null;
+  const res=ols(rows.map(d=>varKeys.map(k=>aoGV(d,k))),rows.map(d=>d.prem));
+  return res?{...res,rows,varKeys}:null;
+}
+function afRunM(varKeys){
+  if(!varKeys.length)return null;
+  const rows=AF_DATA.filter(d=>d.freq!==null&&varKeys.every(k=>afGV(d,k)!==null));
+  if(rows.length<varKeys.length+2)return null;
+  const res=ols(rows.map(d=>varKeys.map(k=>afGV(d,k))),rows.map(d=>d.freq));
+  return res?{...res,rows,varKeys}:null;
+}
+function aoPredict(mdl,sim){
+  let bi=1,pred=mdl.b[0];
+  for(const k of mdl.varKeys){if(sim[k]==null)return null;pred+=mdl.b[bi]*sim[k];bi++}
+  return pred;
+}
+function afPredict(mdl,sim){
+  let bi=1,pred=mdl.b[0];
+  for(const k of mdl.varKeys){if(sim[k]==null)return null;pred+=mdl.b[bi]*sim[k];bi++}
+  return pred;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+const S={
+  page:'simulator', modelPage:'model1',
+  // Blocco A sliders
+  carb:1.69, paxKm:950, avCarb:true, avPax:true,
+  useAfModel:false,
+  // Blocco B sliders
+  severity:4963, inflazione:1.5, euriborB:2.736,
+  avFreq:true, avSev:true, avInfl:true,
+  // Add-on Premio
+  aoFreq:0.04325,aoSev:4963,aoInfl:0.015,aoEur:0.02736,
+  avLc:true,avLag1:true,avEurOn:true,avFreqAo:false,avSevAo:false,avInflD:false,
+  aoManualId:'',
+  // Add-on Frequenza
+  afPax2026:950,afCarb2026:1.69,afStock2026:41.3,afPaxIdx2026:89.3,
+  afAvPax:true,afAvCarb:true,afAvStock:false,afAvPaxIdx:false,
+  afManualId:'',
+  // Regional
+  regRegion:'Campania',regYear:2023,regFreq2026:6.0,regSev2026:2067,
+  // Lab
+  labY:'premio',labX:[],
+};
+
+// ═══════════════════════════════════════════════════════════════════════
+// COMPUTE (runs on every render)
+// ═══════════════════════════════════════════════════════════════════════
+let C={};
+function compute(){
+  // ── Blocco A: Frequency OLS
+  const m1rows=DATA.filter(d=>d.frequency!==null&&(!S.avCarb||d.carburante!==null)&&(!S.avPax||d.paxKm!==null));
+  const m1X=m1rows.map(d=>{const r=[];if(S.avCarb)r.push(d.carburante);if(S.avPax)r.push(d.paxKm);return r});
+  const m1=m1rows.length>0&&m1X[0]?.length>0?ols(m1X,m1rows.map(d=>d.frequency)):null;
+  function calcPredF(c,p){
+    if(!m1)return null;let bi=1,pred=m1.b[0];
+    if(S.avCarb){pred+=m1.b[bi]*c;bi++}if(S.avPax){pred+=m1.b[bi]*p}return pred;
+  }
+  // ── Add-on Frequenza
+  const afCustomVars=[...(S.afAvPax?['pax']:[]),...(S.afAvCarb?['carb']:[]),...(S.afAvStock?['stock']:[]),...(S.afAvPaxIdx?['paxIdx']:[])];
+  const afSim2026={pax:S.afPax2026,carb:S.afCarb2026,stock:S.afStock2026,paxIdx:S.afPaxIdx2026};
+  const allAfResults=[
+    ...AF_MDEFS.map(md=>{const model=afRunM(md.vars);return{...md,model,pred26:model?afPredict(model,afSim2026):null}}),
+    (()=>{const model=afRunM(afCustomVars);return{id:'F',n:'F — Personalizzato',vars:afCustomVars,model,pred26:model?afPredict(model,afSim2026):null}})(),
+  ];
+  const sortedAf=[...allAfResults].filter(r=>r.model).sort((a,b)=>(b.model.r2a??0)-(a.model.r2a??0));
+  const autoBestAfId=sortedAf[0]?.id??'';
+  const afBestId=S.afManualId||autoBestAfId;
+  const afBest=allAfResults.find(r=>r.id===afBestId)??sortedAf[0]??null;
+  // Blocco A: re-compute with Simulatore slider values (S.paxKm/S.carb/etc.), NOT the Add-on section's own sliders (afPax2026/afCarb2026)
+  const simASliders={pax:S.paxKm,carb:S.carb,stock:S.afStock2026,paxIdx:S.afPaxIdx2026};
+  const predF_af=afBest?.model?afPredict(afBest.model,simASliders):null;
+  // Fall back to base OLS only if no add-on model is selected
+  const predF0=predF_af!==null?predF_af:calcPredF(S.carb,S.paxKm);
+  const effF=predF0;
+  // ── Blocco B: Premio base OLS
+  const m2rows=DATA.filter(d=>d.premio!==null&&(!S.avFreq||d.frequency!==null)&&(!S.avSev||d.severity!==null));
+  const m2X=m2rows.map(d=>{const r=[];if(S.avFreq)r.push(d.frequency);if(S.avSev)r.push(d.severity);return r});
+  const m2=m2rows.length>0&&m2X[0]?.length>0?ols(m2X,m2rows.map(d=>d.premio)):null;
+  const sev2026=S.avInfl?S.severity*(1+S.inflazione/100):S.severity;
+  // ── Add-on Premio
+  const aoSevAdj=S.aoSev*(1+S.aoInfl);
+  const aoLc2026=S.aoFreq*aoSevAdj;
+  const aoSim={freq:S.aoFreq,sev:aoSevAdj,lc:aoLc2026,lag1:431.8,eur:S.aoEur,inflD:S.aoInfl};
+  const customVarsAo=[...(S.avFreqAo?['freq']:[]),...(S.avSevAo?['sev']:[]),...(S.avLc?['lc']:[]),...(S.avLag1?['lag1']:[]),...(S.avEurOn?['eur']:[]),...(S.avInflD?['inflD']:[])];
+  const allAoResults=[
+    ...AO_MDEFS.map(md=>{const model=aoRunM(md.vars);return{...md,model,pred26:model?aoPredict(model,aoSim):null}}),
+    (()=>{const model=aoRunM(customVarsAo);return{id:'F',n:'F — Personalizzato',vars:customVarsAo,diag:false,model,pred26:model?aoPredict(model,aoSim):null}})(),
+  ];
+  const rankable=allAoResults.filter(r=>!r.diag&&r.model);
+  const sortedAo=[...rankable].sort((a,b)=>(b.model.r2a??0)-(a.model.r2a??0));
+  const autoBestId=sortedAo[0]?.id??'';
+  const aoBestId=S.aoManualId||autoBestId;
+  const aoBest=allAoResults.find(r=>r.id===aoBestId)??sortedAo[0]??null;
+  // ── Main Premio add-on prediction (driven by Simulatore sliders)
+  const mainSevAdj=S.severity*(1+S.inflazione/100);
+  const mainFreqDec=effF!==null?effF/100:S.aoFreq;
+  const mainLc=mainFreqDec*mainSevAdj;
+  const mainAoSim={freq:mainFreqDec,sev:mainSevAdj,lc:mainLc,lag1:431.8,eur:S.euriborB/100,inflD:S.inflazione/100};
+  const pred26main=aoBest?.model?aoPredict(aoBest.model,mainAoSim)??null:null;
+  const lastF=DATA.filter(d=>d.frequency!==null).pop()?.frequency??null;
+  const lastP=DATA.filter(d=>d.premio!==null).pop()?.premio??null;
+  const dF=predF0!==null&&lastF!==null?predF0-lastF:null;
+  const dP=pred26main!==null&&lastP!==null?pred26main-lastP:null;
+  // ── Multicollinearity Blocco A
+  const bothM1=S.avCarb&&S.avPax&&m1rows.length>2;
+  const m1corr=bothM1?corrMat([m1rows.map(d=>d.carburante),m1rows.map(d=>d.paxKm)]):[[1,0],[0,1]];
+  const m1vif=bothM1&&m1rows.length>3?calcVIF(m1rows.map(d=>[d.carburante,d.paxKm])):[1,1];
+  // ── Multicollinearity AO full matrix
+  const vk6=['freq','sev','lc','lag1','eur','inflD'];
+  const rows6=AO_DATA.filter(d=>d.prem!==null&&vk6.every(k=>aoGV(d,k)!==null));
+  const cols6=vk6.map(k=>rows6.map(d=>aoGV(d,k)));
+  const cm6=rows6.length>=3?corrMat(cols6):null;
+  C={m1,m1rows,m2,m2rows,predF0,effF,sev2026,pred26main,
+    lastF,lastP,dF,dP,aoBest,aoBestId,allAoResults,sortedAo,
+    afBest,afBestId,allAfResults,sortedAf,afCustomVars,
+    aoSevAdj,aoLc2026,mainAoSim,
+    bothM1,m1corr,m1vif,cm6,vk6,rows6,
+    calcPredF,customVarsAo,afSim2026,mainSevAdj,mainFreqDec,mainLc,
+    m2rows};
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHART HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+const COLORS=['#2563eb','#16a34a','#f59e0b','#dc2626','#7c3aed','#0891b2'];
+function fi(v){return v==null?'—':Math.round(v).toLocaleString('en-US')}
+function ff(v,d=2){return v==null?'—':v.toFixed(d)}
+function fv(v){return v!=null&&v>=0?'+'+v.toFixed(1):v!=null?v.toFixed(1):'—'}
+
+// Main line chart — returns SVG string
+function mkChart(opts){
+  // pad.b must be large enough for x-labels (16px) + legend (22px) = 38px minimum
+  const{series,labels,W=700,H=260,yLabel='',pad={l:58,r:20,t:36,b:58}}=opts;
+  const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+  const allV=series.flatMap(s=>s.data.filter(v=>v!=null&&isFinite(v)));
+  if(!allV.length)return `<div style="color:var(--text3);font-size:12px;padding:20px">Nessun dato</div>`;
+  let yMin=Math.min(...allV),yMax=Math.max(...allV);
+  const margin=(yMax-yMin)*0.08||1;yMin-=margin;yMax+=margin;
+  const n=labels.length;
+  const px=i=>pad.l+(i/(n-1||1))*iW;
+  const py=v=>pad.t+iH-(v-yMin)/(yMax-yMin||1)*iH;
+  // grid + axes labels
+  let g='',xg='',paths='',dots='',legend='';
+  for(let i=0;i<=4;i++){const v=yMin+(yMax-yMin)*i/4;const y=py(v);g+=`<line x1="${pad.l}" y1="${y.toFixed(1)}" x2="${pad.l+iW}" y2="${y.toFixed(1)}" stroke="#e2e8f0" stroke-width="1"/>`;g+=`<text x="${pad.l-5}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="9" fill="#94a3b8">${v.toFixed(v>100?0:1)}</text>`}
+  labels.forEach((lbl,i)=>{xg+=`<text x="${px(i).toFixed(1)}" y="${(pad.t+iH+16).toFixed(1)}" text-anchor="middle" font-size="9" fill="#94a3b8">${lbl}</text>`});
+  // Legend baseline: 36px below chart bottom (after x-labels)
+  const legY=pad.t+iH+36;
+  series.forEach((s,si)=>{
+    const col=s.color||COLORS[si%COLORS.length];
+    const pts=s.data.map((v,i)=>({v,i})).filter(p=>p.v!=null&&isFinite(p.v));
+    if(!pts.length)return;
+    const d=pts.map((p,pi)=>`${pi===0?'M':'L'}${px(p.i).toFixed(1)},${py(p.v).toFixed(1)}`).join(' ');
+    const dash=s.dashed?'stroke-dasharray="5,3"':'';
+    paths+=`<path d="${d}" fill="none" stroke="${col}" stroke-width="${s.w||2}" ${dash} opacity="${s.op||1}"/>`;
+    pts.forEach(p=>{
+      const tip=`${labels[p.i]}: ${p.v.toFixed(s.dec??1)}${s.unit||''}`;
+      const r=s.big?7:4;
+      const extra=s.big?`stroke="black" stroke-width="2"`:'';
+      dots+=`<circle cx="${px(p.i).toFixed(1)}" cy="${py(p.v).toFixed(1)}" r="${r}" fill="${col}" fill-opacity="${s.big?1:.85}" ${extra} data-tip="${tip}" style="cursor:pointer"/>`;
+    });
+    // Legend: absolute positioning — start at pad.l, spread 140px each
+    const lx=pad.l+si*145;
+    legend+=`<line x1="${lx}" y1="${legY}" x2="${lx+18}" y2="${legY}" stroke="${col}" stroke-width="2.5" ${dash}/><text x="${lx+22}" y="${legY+4}" font-size="10" fill="#475569">${s.name}</text>`;
+  });
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:${W}px">
+    ${g}${xg}
+    <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+iH}" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="${pad.l}" y1="${pad.t+iH}" x2="${pad.l+iW}" y2="${pad.t+iH}" stroke="#94a3b8" stroke-width="1"/>
+    ${paths}${dots}
+    <text x="${pad.l}" y="18" font-size="10" fill="#64748b" font-weight="500">${yLabel}</text>
+    ${legend}
+  </svg>`;
+}
+
+function mkScatter(pts,sim,xl,yl,W=340,H=220){
+  if(!pts.length)return`<div style="color:var(--text3);font-size:12px">Nessun dato</div>`;
+  const pad={l:52,r:14,t:14,b:40};
+  const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+  const allX=pts.map(p=>p.x).concat(sim?[sim.x]:[]);
+  const allY=pts.map(p=>p.y).concat(sim?[sim.y]:[]);
+  let xMin=Math.min(...allX),xMax=Math.max(...allX),yMin=Math.min(...allY),yMax=Math.max(...allY);
+  const xm=(xMax-xMin)*0.08||0.5,ym=(yMax-yMin)*0.08||5;
+  xMin-=xm;xMax+=xm;yMin-=ym;yMax+=ym;
+  const px=x=>pad.l+(x-xMin)/(xMax-xMin)*iW;
+  const py=y=>pad.t+iH-(y-yMin)/(yMax-yMin)*iH;
+  const fitRes=ols(pts.map(p=>[p.x]),pts.map(p=>p.y));
+  let g='',content='';
+  for(let i=0;i<=3;i++){const xv=xMin+(xMax-xMin)*i/3;const yv=yMin+(yMax-yMin)*i/3;g+=`<line x1="${pad.l}" y1="${py(yv).toFixed(1)}" x2="${pad.l+iW}" y2="${py(yv).toFixed(1)}" stroke="#e2e8f0" stroke-width="1"/><text x="${pad.l-5}" y="${(py(yv)+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#94a3b8">${yv.toFixed(0)}</text>`;g+=`<text x="${px(xv).toFixed(1)}" y="${pad.t+iH+14}" text-anchor="middle" font-size="8" fill="#94a3b8">${xv.toFixed(2)}</text>`}
+  if(fitRes){const x1=xMin,x2=xMax,y1=fitRes.b[0]+fitRes.b[1]*x1,y2=fitRes.b[0]+fitRes.b[1]*x2;content+=`<line x1="${px(x1).toFixed(1)}" y1="${py(y1).toFixed(1)}" x2="${px(x2).toFixed(1)}" y2="${py(y2).toFixed(1)}" stroke="#2563eb" stroke-width="1.5" stroke-dasharray="5,3" opacity=".6"/>`}
+  pts.forEach(p=>{content+=`<circle cx="${px(p.x).toFixed(1)}" cy="${py(p.y).toFixed(1)}" r="4" fill="#2563eb" fill-opacity=".7" data-tip="Anno ${p.lbl}\nX: ${p.x.toFixed(3)}\nY: ${p.y.toFixed(2)}" style="cursor:pointer"/>`;content+=`<text x="${(px(p.x)+5).toFixed(1)}" y="${(py(p.y)-3).toFixed(1)}" font-size="7" fill="#94a3b8">${p.lbl}</text>`});
+  if(sim){content+=`<circle cx="${px(sim.x).toFixed(1)}" cy="${py(sim.y).toFixed(1)}" r="8" fill="none" stroke="#1e293b" stroke-width="2" data-tip="2026 (sim)\nX: ${sim.x.toFixed(3)}\nY: ${sim.y.toFixed(2)}" style="cursor:pointer"/>`;content+=`<circle cx="${px(sim.x).toFixed(1)}" cy="${py(sim.y).toFixed(1)}" r="3" fill="#1e293b"/>`;content+=`<text x="${(px(sim.x)+10).toFixed(1)}" y="${(py(sim.y)-4).toFixed(1)}" font-size="8" fill="#1e293b" font-weight="600">2026</text>`}
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:${W}px">
+    ${g}
+    <line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+iH}" stroke="#94a3b8"/>
+    <line x1="${pad.l}" y1="${pad.t+iH}" x2="${pad.l+iW}" y2="${pad.t+iH}" stroke="#94a3b8"/>
+    ${content}
+    <text x="${pad.l+iW/2}" y="${H-4}" text-anchor="middle" font-size="9" fill="#475569">${xl}</text>
+    <text x="12" y="${pad.t+iH/2}" text-anchor="middle" font-size="9" fill="#475569" transform="rotate(-90 12 ${pad.t+iH/2})">${yl}</text>
+  </svg>`;
+}
+
+function mkFitChart(yrs,obs,yhat,yLabel,W=340,H=200){
+  const labels=yrs.map(String);
+  return mkChart({series:[
+    {name:'Osservato',data:obs,color:'#2563eb',w:2},
+    {name:'Stimato',data:yhat,color:'#16a34a',w:2,dashed:true},
+  ],labels,W,H,yLabel});
+}
+
+function mkResidChart(yrs,residuals,W=340,H=180){
+  const labels=yrs.map(String);
+  const maxAbs=Math.max(...residuals.map(Math.abs),1);
+  const pad={l:58,r:20,t:24,b:40};
+  const iW=W-pad.l-pad.r,iH=H-pad.t-pad.b;
+  const n=labels.length;
+  const px=i=>pad.l+(i/(n-1||1))*iW;
+  const py=v=>pad.t+iH/2-v/(maxAbs*1.2)*iH/2;
+  let g=`<line x1="${pad.l}" y1="${pad.t+iH/2}" x2="${pad.l+iW}" y2="${pad.t+iH/2}" stroke="#94a3b8" stroke-dasharray="4,2" stroke-width="1"/>`;
+  labels.forEach((l,i)=>{g+=`<text x="${px(i)}" y="${pad.t+iH+14}" text-anchor="middle" font-size="9" fill="#94a3b8">${l}</text>`});
+  let bars='';
+  residuals.forEach((r,i)=>{
+    const col=r>=0?'#16a34a':'#dc2626';
+    const y0=py(0),y1=py(r),top=Math.min(y0,y1),h=Math.abs(y0-y1)||2;
+    bars+=`<rect x="${(px(i)-5).toFixed(1)}" y="${top.toFixed(1)}" width="10" height="${h.toFixed(1)}" fill="${col}" opacity=".7" data-tip="${labels[i]}: residuo ${r.toFixed(2)}" style="cursor:pointer"/>`;
+  });
+  return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;max-width:${W}px">${g}${bars}</svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SLIDER HELPER
+// ═══════════════════════════════════════════════════════════════════════
+function sldr(key,label,min,max,step,unit,val){
+  const disp=unit==='%'||(step<1&&step>=0.01)?val.toFixed(2):step<0.01?val.toFixed(4):val.toFixed(2);
+  return`<div class="sl-wrap">
+    <div class="sl-label"><span>${label}</span><span class="v">${disp} ${unit}</span></div>
+    <input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-slider="${key}" oninput="onSl('${key}',+this.value)">
+    <div class="sl-limits"><span>${min} ${unit}</span><span>${max} ${unit}</span></div>
+  </div>`;
+}
+function chip(key,label,val){return`<button class="chip${val?' on':''}" onclick="toggle('${key}')">${val?'●':'○'} ${label}</button>`}
+
+function onSl(key,val){S[key]=val;rerender()}
+function toggle(key){S[key]=!S[key];rerender()}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 1 — SIMULATORE RCA
+// ═══════════════════════════════════════════════════════════════════════
+function renderSimulator(){
+  const{predF0,pred26main,lastF,lastP,dF,dP,aoBest,afBest}=C;
+
+  // ── Frequency chart
+  // DATA already has anno:2026 with null frequency — use that as the sim position (no extra label needed)
+  const freqLabels=DATA.map(d=>String(d.anno));
+  const freqReal=DATA.map(d=>d.frequency);                         // null at 2026
+  const freqHistFit=DATA.map(d=>{
+    if(!afBest?.model||d.anno===2026)return null;                  // no historical fit at 2026
+    const afRow=AF_DATA.find(r=>r.y===d.anno);if(!afRow)return null;
+    if(afBest.vars.some(k=>afGV(afRow,k)===null))return null;
+    return afPredict(afBest.model,{pax:afRow.pax,carb:afRow.carb,stock:afRow.stock,paxIdx:afRow.paxIdx});
+  });
+  const lastRealFIdx=DATA.reduce((acc,d,i)=>d.frequency!=null?i:acc,-1); // index of 2025
+  const freqConn=DATA.map((d,i)=>{                                 // connector: 2025 actual → 2026 pred
+    if(i===lastRealFIdx)return d.frequency;
+    if(d.anno===2026)return predF0;
+    return null;
+  });
+  const freqDot=DATA.map(d=>d.anno===2026?predF0:null);            // big dot at 2026
+  const chartFreq=mkChart({series:[
+    {name:'Storico',data:freqReal,color:'#2563eb',w:2,dec:3,unit:'%'},
+    {name:`${afBest?.n??'Add-on'} (fitted)`,data:freqHistFit,color:'#16a34a',w:2,dashed:true,dec:3,unit:'%'},
+    {name:'Proiezione → 2026',data:freqConn,color:'#f59e0b',w:1.5,dashed:true,dec:3,unit:'%'},
+    {name:'Stima 2026',data:freqDot,color:'#f59e0b',w:0,big:true,dec:3,unit:'%'},
+  ],labels:freqLabels,W:700,H:260,yLabel:'Frequency %'});
+
+  // ── Premio chart
+  const premLabels=DATA.map(d=>String(d.anno));
+  const premReal=DATA.map(d=>d.premio);                            // null at 2026
+  const premHistFit=DATA.map(d=>{
+    if(!aoBest?.model||d.anno===2026)return null;
+    const aoRow=AO_DATA.find(r=>r.y===d.anno);if(!aoRow)return null;
+    if(aoBest.model.varKeys.some(k=>aoGV(aoRow,k)===null))return null;
+    const hs={freq:aoRow.freq??0,sev:aoRow.sev??0,lc:aoRow.lc??0,lag1:aoRow.lag1??0,eur:aoRow.eur,inflD:aoRow.infl};
+    return aoPredict(aoBest.model,hs);
+  });
+  const lastRealPIdx=DATA.reduce((acc,d,i)=>d.premio!=null?i:acc,-1);
+  const premConn=DATA.map((d,i)=>{
+    if(i===lastRealPIdx)return d.premio;
+    if(d.anno===2026)return pred26main;
+    return null;
+  });
+  const premDot=DATA.map(d=>d.anno===2026?pred26main:null);
+  const chartPrem=mkChart({series:[
+    {name:'Storico',data:premReal,color:'#2563eb',w:2,dec:1,unit:'€'},
+    {name:'Modello Predittivo Premio',data:premHistFit,color:'#7c3aed',w:2,dashed:true,dec:1,unit:'€'},
+    {name:'Proiezione → 2026',data:premConn,color:'#f59e0b',w:1.5,dashed:true,dec:1,unit:'€'},
+    {name:'Stima 2026',data:premDot,color:'#f59e0b',w:0,big:true,dec:1,unit:'€'},
+  ],labels:premLabels,W:700,H:260,yLabel:'Premio €'});
+
+  // ── Blocco A sliders — always driven by active Add-on Freq model
+  let blASliders='';
+  if(afBest){
+    if(afBest.vars.includes('pax'))   blASliders+=sldr('paxKm',     'PaxKm 2026 (mln)',         500,1400,5,    'mln',     S.paxKm);
+    if(afBest.vars.includes('carb'))  blASliders+=sldr('carb',      'Carburante 2026 (€/litro)', 0.8,2.5,0.01, '€/litro', S.carb);
+    if(afBest.vars.includes('stock')) blASliders+=sldr('afStock2026','Stock auto (mln)',          36,44,0.1,    'mln',     S.afStock2026);
+    if(afBest.vars.includes('paxIdx'))blASliders+=sldr('afPaxIdx2026','Trasporti/PIL idx',       50,130,0.5,   'idx',     S.afPaxIdx2026);
+  } else {
+    blASliders='<div class="callout warn" style="margin:8px 0">Nessun modello Add-on Frequenza disponibile. Vai ad <strong>Add-on Frequenza</strong> per selezionarlo.</div>';
+  }
+
+  // ── Blocco B sliders — driven by active Premio Add-on model
+  const activeVars=aoBest?.model?.varKeys??[];
+  let blBSliders='';
+  if(activeVars.includes('sev')||activeVars.includes('lc'))blBSliders+=sldr('severity','Severity base 2026 (€)',3000,8000,25,'€',S.severity);
+  blBSliders+=sldr('inflazione','Inflazione attesa 2026 (%)',-2,15,0.1,'%',S.inflazione);
+  if(activeVars.includes('eur'))blBSliders+=sldr('euriborB','EURIBOR 3M 2026 (%)',-1,6,0.001,'%',S.euriborB);
+
+  // ── Callouts
+  const afCallout=afBest
+    ?`<div class="callout suc"><strong>Modello Add-on Freq attivo: ${afBest.n}</strong><br>Variabili: ${afBest.vars.map(k=>AF_VLBL[k]).join(' + ')}${afBest.pred26!=null?` | Stima 2026: <strong>${afBest.pred26.toFixed(3)}%</strong>`:''}</div>`
+    :'<div class="callout warn">Vai ad <strong>Add-on Frequenza</strong> per selezionare il modello.</div>';
+  const aoCallout=aoBest
+    ?`<div class="callout info"><strong>Modello Premio attivo: ${aoBest.n}</strong><br>Variabili: ${aoBest.vars.map(k=>AO_VLBL[k]).join(' + ')}${activeVars.includes('sev')||activeVars.includes('lc')?' | Severity → modifica slider':''}${activeVars.includes('eur')?' | EURIBOR → modifica slider':''}</div>`
+    :'<div class="callout warn">Nessun modello Premio selezionato. Vai ad <strong>Add-on Premio</strong>.</div>';
+
+  return`<div class="g2">
+    <!-- ── Blocco A ── -->
+    <div class="card">
+      <h2>📊 Blocco A — Frequency RC AUTO</h2>
+      ${afCallout}
+      ${blASliders}
+      <div class="row" style="margin-top:6px;margin-bottom:12px">
+        <button class="btn" onclick="S.paxKm=950;S.carb=1.69;S.afStock2026=41.3;S.afPaxIdx2026=89.3;rerender()">↺ Reset variabili Blocco A</button>
+      </div>
+      <div class="g3">
+        <div class="stat${dF!=null&&dF>0?' warn':dF!=null&&dF<0?' suc':''}">
+          <div class="val">${predF0!=null?predF0.toFixed(3)+'%':'—'}</div>
+          <div class="lbl">Frequency stim. 2026</div>
+        </div>
+        <div class="stat">
+          <div class="val">${lastF!=null?lastF.toFixed(3)+'%':'—'}</div>
+          <div class="lbl">Ultima reale (2025)</div>
+        </div>
+        <div class="stat${dF!=null?(dF>0?' warn':' suc'):''}">
+          <div class="val">${dF!=null?(dF>=0?'+':'')+dF.toFixed(3)+'%':'—'}</div>
+          <div class="lbl">Δ vs 2025</div>
+        </div>
+      </div>
+      <div class="chart-wrap">${chartFreq}</div>
+    </div>
+
+    <!-- ── Blocco B ── -->
+    <div class="card">
+      <h2>💰 Blocco B — Premio RC AUTO</h2>
+      ${aoCallout}
+      ${blBSliders}
+      <div class="row" style="margin-top:6px;margin-bottom:12px">
+        <button class="btn" onclick="S.severity=4963;S.inflazione=1.5;S.euriborB=2.736;rerender()">↺ Reset variabili Blocco B</button>
+      </div>
+      <div class="g3">
+        <div class="stat suc">
+          <div class="val">${pred26main!=null?Math.round(pred26main).toLocaleString('en-US')+' €':'—'}</div>
+          <div class="lbl">Premio stim. 2026</div>
+        </div>
+        <div class="stat">
+          <div class="val">${lastP!=null?lastP.toFixed(1)+' €':'—'}</div>
+          <div class="lbl">Ultimo reale (2025)</div>
+        </div>
+        <div class="stat${dP!=null?(dP>0?' warn':' suc'):''}">
+          <div class="val">${dP!=null?(dP>=0?'+':'')+dP.toFixed(1)+' €':'—'}</div>
+          <div class="lbl">Δ vs 2025</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">
+        Sev adj: ${C.mainSevAdj!=null?Math.round(C.mainSevAdj).toLocaleString('en-US')+' €':'—'} |
+        LossCost: ${C.mainLc!=null?C.mainLc.toFixed(2):'—'} € |
+        Freq dec.: ${C.mainFreqDec!=null?C.mainFreqDec.toFixed(5):'—'}
+      </div>
+      <div class="chart-wrap">${chartPrem}</div>
+    </div>
+  </div>
+  <div class="card" style="background:var(--info-bg);border-color:var(--info-b)">
+    <h3 style="color:var(--ac)">ℹ️ Note metodologiche</h3>
+    <div style="font-size:12px;color:var(--text2);line-height:1.7">
+      <strong>Inflazione:</strong> aggiusta Severity (non è regressore diretto): Sev_adj = Sev × (1+infl%) = ${C.mainSevAdj!=null?Math.round(C.mainSevAdj).toLocaleString('en-US')+' €':'—'}<br>
+      <strong>Premio lag1:</strong> 431.8 € (Premio 2025, fisso)<br>
+      <strong>Modello Freq attivo:</strong> ${afBest?.n??'—'} | Var: ${afBest?.vars?.map(k=>AF_VLBL[k]).join(', ')??'—'}<br>
+      <strong>Modello Premio attivo:</strong> ${aoBest?.n??'—'} | Var: ${aoBest?.vars?.map(k=>AO_VLBL[k]).join(', ')??'—'}
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 2 — SPIEGAZIONE MODELLI
+// ═══════════════════════════════════════════════════════════════════════
+function renderModels(){
+  const{m1,m1rows,aoBest,bothM1,m1corr,m1vif,cm6,vk6,rows6}=C;
+  const subNav=`<div class="sub-nav">
+    <button class="${S.modelPage==='model1'?'active':''}" onclick="S.modelPage='model1';rerender()">Blocco A — Frequency</button>
+    <button class="${S.modelPage==='modelAo'?'active':''}" onclick="S.modelPage='modelAo';rerender()">Blocco B — Premio (Add-on)</button>
+  </div>`;
+  let content='';
+  if(S.modelPage==='model1'){
+    const scatCarb=m1rows.filter(d=>d.carburante!==null).map(d=>({x:d.carburante,y:d.frequency,lbl:String(d.anno)}));
+    const scatPax=m1rows.filter(d=>d.paxKm!==null).map(d=>({x:d.paxKm,y:d.frequency,lbl:String(d.anno)}));
+    const simCarb=S.avCarb&&C.predF0!=null?{x:S.carb,y:C.predF0}:null;
+    const simPax=S.avPax&&C.predF0!=null?{x:S.paxKm,y:C.predF0}:null;
+    if(!m1){content=`<div class="callout err">Dati insufficienti. Attiva almeno un predittore.</div>`}
+    else{
+      const coefRows=[`<tr><td>Intercetta</td><td>${m1.b[0].toFixed(4)}</td><td>—</td><td>Freq. base</td></tr>`];
+      let bi=1;
+      if(S.avCarb)coefRows.push(`<tr><td>Carburante €/litro</td><td>${m1.b[bi].toFixed(5)}</td><td>${m1.b[bi]>=0?'+':'−'}</td><td>${m1.b[bi]>=0?'Carb↑ → freq↑':'Carb↑ → freq↓'}</td></tr>`),bi++;
+      if(S.avPax)coefRows.push(`<tr><td>PaxKm (mln)</td><td>${m1.b[bi].toFixed(5)}</td><td>${m1.b[bi]>=0?'+':'−'}</td><td>${m1.b[bi]>=0?'Mob↑ → freq↑':'Mob↑ → freq↓'}</td></tr>`);
+      content=`<h2>Blocco A — Modello Frequency</h2>
+        <div style="color:var(--text2);font-size:12px;margin-bottom:14px">OLS: Frequency ~ Carburante (€/litro) + PaxKm. Per modelli più sofisticati vai ad <strong>Add-on Frequenza</strong>.</div>
+        <div class="g2">
+          <div>
+            <h3>Metriche</h3>
+            <table><thead><tr><th>Metrica</th><th>Valore</th></tr></thead><tbody>
+              <tr><td>Periodo</td><td>${m1rows[0].anno}–${m1rows[m1rows.length-1].anno}</td></tr>
+              <tr><td>Osservazioni</td><td>${m1.n}</td></tr>
+              <tr><td>R²</td><td>${m1.r2.toFixed(4)}</td></tr>
+              <tr><td>R² adj</td><td>${m1.r2a.toFixed(4)}</td></tr>
+              <tr><td>RMSE</td><td>${m1.rmse.toFixed(4)} %</td></tr>
+              <tr><td>MAE</td><td>${m1.mae.toFixed(4)} %</td></tr>
+            </tbody></table>
+          </div>
+          <div>
+            <h3>Coefficienti</h3>
+            <table><thead><tr><th>Variabile</th><th>Coeff.</th><th>Segno</th><th>Lettura</th></tr></thead><tbody>${coefRows.join('')}</tbody></table>
+          </div>
+        </div>
+        <hr class="divider">
+        <h3>Scatter plot</h3>
+        <div class="g2">
+          <div><div style="font-size:12px;font-weight:600;margin-bottom:6px">Carburante vs Frequency</div><div class="chart-wrap">${mkScatter(scatCarb,simCarb,'Carburante (€/litro)','Frequency (%)')}</div></div>
+          <div><div style="font-size:12px;font-weight:600;margin-bottom:6px">PaxKm vs Frequency</div><div class="chart-wrap">${mkScatter(scatPax,simPax,'PaxKm (mln)','Frequency (%)')}</div></div>
+        </div>`;
+    }
+  } else {
+    if(!aoBest?.model){content=`<div class="callout warn">Nessun modello selezionato nell'Add-on Premio. Vai alla pagina <strong>Add-on Premio</strong> e seleziona il modello migliore.</div>`}
+    else{
+      const mdl=aoBest.model;
+      const vk=mdl.varKeys;
+      const fitYrs=mdl.rows.map(r=>r.y);
+      const obs=mdl.rows.map(r=>r.prem);
+      const yhat=mdl.yhat;
+      const residuals=mdl.residuals||obs.map((o,i)=>o-yhat[i]);
+      const coefRows=[`<tr><td>Intercetta</td><td>${mdl.b[0].toFixed(2)}</td><td>—</td></tr>`,...vk.map((k,i)=>`<tr><td>${AO_VLBL[k]}</td><td>${mdl.b[i+1].toFixed(4)}</td><td>${mdl.b[i+1]>=0?'+':'−'}</td></tr>`)];
+      content=`<h2>${aoBest.n}</h2>
+        <div class="callout suc">Variabili: <strong>${vk.map(k=>AO_VLBL[k]).join(' + ')}</strong> | N: ${mdl.n} | R² adj: ${mdl.r2a.toFixed(4)}</div>
+        <div class="g2">
+          <div>
+            <h3>Metriche</h3>
+            <table><thead><tr><th>Metrica</th><th>Valore</th></tr></thead><tbody>
+              <tr><td>R²</td><td>${mdl.r2.toFixed(4)}</td></tr>
+              <tr><td>R² adj</td><td>${mdl.r2a.toFixed(4)}</td></tr>
+              <tr><td>RMSE</td><td>${mdl.rmse.toFixed(2)} €</td></tr>
+              <tr><td>MAE</td><td>${mdl.mae.toFixed(2)} €</td></tr>
+              <tr><td>N obs.</td><td>${mdl.n}</td></tr>
+            </tbody></table>
+            <h3 style="margin-top:14px">Coefficienti</h3>
+            <table><thead><tr><th>Variabile</th><th>Coeff.</th><th>Segno</th></tr></thead><tbody>${coefRows.join('')}</tbody></table>
+            ${C.pred26main!=null?`<div class="stat suc" style="margin-top:14px"><div class="val">${Math.round(C.pred26main).toLocaleString('en-US')} €</div><div class="lbl">Premio 2026 (Simulatore)</div></div>`:''}
+          </div>
+          <div>
+            <h3>Osservato vs Stimato</h3>
+            <div class="chart-wrap">${mkFitChart(fitYrs,obs,yhat,'Premio €')}</div>
+            <h3 style="margin-top:14px">Residui</h3>
+            <div class="chart-wrap">${mkResidChart(fitYrs,residuals)}</div>
+          </div>
+        </div>`;
+    }
+  }
+  // ── Multicollinearity (always visible)
+  let mcA='',mcB='',mcFull='';
+  if(!bothM1){mcA=`<div style="color:var(--text3);font-size:12px">Attiva Carburante <em>e</em> PaxKm per calcolare.</div>`}
+  else{
+    const r=m1corr[0][1],highCorr=Math.abs(r)>0.8;
+    const vifJudge=v=>v>10?'Grave':v>5?'Alto':v>2.5?'Moderato':'Ok';
+    mcA=`${highCorr?`<div class="callout warn">Alta correlazione Carburante–PaxKm (r = ${r.toFixed(3)}).</div>`:''}
+    <table><thead><tr><th></th><th>Carburante</th><th>PaxKm</th></tr></thead><tbody>
+      <tr><td>Carburante</td><td>${m1corr[0][0].toFixed(3)}</td><td>${m1corr[0][1].toFixed(3)}</td></tr>
+      <tr><td>PaxKm</td><td>${m1corr[1][0].toFixed(3)}</td><td>${m1corr[1][1].toFixed(3)}</td></tr>
+    </tbody></table>
+    <table style="margin-top:8px"><thead><tr><th>Variabile</th><th>VIF</th><th>Giudizio</th></tr></thead><tbody>
+      <tr ${m1vif[0]>5?'class="tr-warn"':''}><td>Carburante</td><td>${m1vif[0].toFixed(2)}</td><td>${vifJudge(m1vif[0])}</td></tr>
+      <tr ${m1vif[1]>5?'class="tr-warn"':''}><td>PaxKm</td><td>${m1vif[1].toFixed(2)}</td><td>${vifJudge(m1vif[1])}</td></tr>
+    </tbody></table>`;
+  }
+  if(!aoBest?.model){mcB=`<div style="color:var(--text3);font-size:12px">Seleziona un modello in Add-on Premio.</div>`}
+  else{
+    const vk=aoBest.model.varKeys;if(vk.length<2){mcB=`<div style="font-size:12px;color:var(--text3)">Solo 1 variabile — nessuna multicollinearità applicabile.</div>`}
+    else{
+      const rows=aoBest.model.rows;
+      const cols=vk.map(k=>rows.map(d=>aoGV(d,k)));
+      const cm=corrMat(cols);
+      const vifB=rows.length>vk.length+1?calcVIF(rows.map(d=>vk.map(k=>aoGV(d,k)))):Array(vk.length).fill(1);
+      const maxOff=Math.max(...vk.flatMap((_,i)=>vk.map((__,j)=>i!==j?Math.abs(cm[i]?.[j]??0):0)));
+      const vifJudge=v=>v>10?'Grave':v>5?'Alto':v>2.5?'Moderato':'Ok';
+      mcB=`${maxOff>0.8?`<div class="callout warn">Alta correlazione (max |r| = ${maxOff.toFixed(3)}). Valutare rimozione di variabili ridondanti.</div>`:''}
+      <table><thead><tr><th></th>${vk.map(k=>`<th>${AO_VLBL[k]}</th>`).join('')}</tr></thead><tbody>
+        ${vk.map((k,i)=>`<tr><td><strong>${AO_VLBL[k]}</strong></td>${vk.map((_,j)=>`<td>${(cm[i]?.[j]??0).toFixed(3)}</td>`).join('')}</tr>`).join('')}
+      </tbody></table>
+      <table style="margin-top:8px"><thead><tr><th>Variabile</th><th>VIF</th><th>Giudizio</th></tr></thead><tbody>
+        ${vk.map((k,i)=>`<tr ${(vifB[i]??1)>5?'class="tr-warn"':''}><td>${AO_VLBL[k]}</td><td>${(vifB[i]??1).toFixed(2)}</td><td>${vifJudge(vifB[i]??1)}</td></tr>`).join('')}
+      </tbody></table>`;
+    }
+  }
+  if(cm6&&rows6.length>=3){
+    const labs6=vk6.map(k=>AO_VLBL[k]);
+    mcFull=`<table><thead><tr><th></th>${labs6.map(l=>`<th>${l}</th>`).join('')}</tr></thead><tbody>
+      ${labs6.map((l,i)=>`<tr><td><strong>${l}</strong></td>${labs6.map((_,j)=>`<td>${(cm6[i]?.[j]??0).toFixed(3)}</td>`).join('')}</tr>`).join('')}
+    </tbody></table>`;
+  }
+  return`${subNav}
+    ${content}
+    <hr class="divider">
+    <h2>Verifica Multicollinearità</h2>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">VIF: &lt; 2.5 = Ok · 2.5–5 = Moderato · &gt; 5 = Alto · &gt; 10 = Grave</div>
+    <div class="g2">
+      <div class="card"><h3>Blocco A — Frequency (Carburante + PaxKm)</h3>${mcA}</div>
+      <div class="card"><h3>Blocco B — Premio (${aoBest?.n??'nessun modello'})</h3>${mcB}</div>
+    </div>
+    <div class="card">
+      <h3>Matrice correlazione completa — Dataset Premio (tutte le variabili)</h3>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">LossCost = Freq × Sev → correlazione strutturale alta con entrambe per costruzione.</div>
+      <div style="overflow-x:auto">${mcFull||'<span style="color:var(--text3);font-size:12px">Dati insufficienti.</span>'}</div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 3 — ADD-ON PREMIO
+// ═══════════════════════════════════════════════════════════════════════
+function renderAddon(){
+  const{allAoResults,aoBestId,aoSevAdj,aoLc2026,pred26main}=C;
+  const tableRows=AO_DATA.filter(d=>d.prem!==null).map(d=>`<tr ${d.y===2020?'class="tr-warn"':''}>
+    <td>${d.y}</td><td>${d.freq!=null?(d.freq*100).toFixed(3)+'%':'—'}</td>
+    <td>${d.sev!=null?Math.round(d.sev).toLocaleString('en-US'):'—'}</td>
+    <td>${d.prem!=null?d.prem.toFixed(1):'—'}</td>
+    <td>${(d.infl*100).toFixed(2)}%</td>
+    <td>${(d.eur*100).toFixed(3)}%</td>
+    <td>${d.lc!=null?d.lc.toFixed(2):'—'}</td>
+    <td>${d.lag1!=null?d.lag1.toFixed(1):'—'}</td>
+  </tr>`).join('');
+  const warn=S.avFreqAo&&S.avSevAo&&S.avLc?'<div class="callout warn">LossCost = Freq × Sev. Usarli insieme genera multicollinearità grave.</div>':'';
+  const warnInfl=S.avInflD?'<div class="callout warn">Inflazione diretta: solo diagnostica. L\'inflazione agisce sulla Severity per la previsione.</div>':'';
+  const modelRows=allAoResults.map(r=>{
+    const isBest=r.id===aoBestId;const isRec=r.rec;
+    return`<tr class="${isBest?'tr-star':''} ${r.y===2020?'tr-warn':''}">
+      <td>${r.id}${isRec?' ⭐':''}</td>
+      <td>${r.vars.map(k=>AO_VLBL[k]).join(' + ')||'—'}</td>
+      <td>${r.model?r.model.r2.toFixed(4):'—'}</td>
+      <td>${r.model?r.model.r2a.toFixed(4):'—'}</td>
+      <td>${r.model?r.model.rmse.toFixed(2)+' €':'—'}</td>
+      <td>${r.model?r.model.mae.toFixed(2)+' €':'—'}</td>
+      <td>${r.model?String(r.model.n):'—'}</td>
+      <td>${r.pred26!=null?Math.round(r.pred26).toLocaleString('en-US')+' €':'—'}</td>
+      <td>${r.model?`<button class="btn${isBest?' pri':''}" onclick="S.aoManualId='${r.id}';rerender()">Usa</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+  // Fit chart of best model
+  let fitSection='';
+  const best=allAoResults.find(r=>r.id===aoBestId);
+  if(best?.model){
+    const mdl=best.model;
+    const fitYrs=mdl.rows.map(r=>r.y);
+    const obs=mdl.rows.map(r=>r.prem);
+    const yhat=mdl.yhat;
+    const residuals=mdl.residuals||obs.map((o,i)=>o-yhat[i]);
+    fitSection=`<hr class="divider"><h2>Modello attivo: ${best.n}</h2>
+    <div class="g2">
+      <div><h3>Osservato vs Stimato</h3><div class="chart-wrap">${mkFitChart(fitYrs,obs,yhat,'Premio €')}</div></div>
+      <div><h3>Residui</h3><div class="chart-wrap">${mkResidChart(fitYrs,residuals)}</div></div>
+    </div>`;
+  }
+  return`<div class="callout neut">Add-on — Selezione modello migliore Premio RC AUTO. Database: "20260506_DB FREQUENCY PREMIO CLEAN_V01". LossCost = Freq × Sev.</div>
+  <h2>Dataset — Variabili derivate</h2>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Anno</th><th>Freq %</th><th>Severity €</th><th>Premio €</th><th>Inflaz %</th><th>EURIBOR %</th><th>LossCost €</th><th>lag1 €</th></tr></thead>
+    <tbody>${tableRows}</tbody></table>
+  </div>
+  <hr class="divider">
+  <h2>Toggle variabili — Modello F (personalizzato)</h2>
+  <div class="chips">
+    ${chip('avFreqAo','Frequency',S.avFreqAo)}
+    ${chip('avSevAo','Severity',S.avSevAo)}
+    ${chip('avLc','LossCost',S.avLc)}
+    ${chip('avLag1','Premio lag1',S.avLag1)}
+    ${chip('avEurOn','EURIBOR 3M',S.avEurOn)}
+    ${chip('avInflD','Inflazione (diag)',S.avInflD)}
+  </div>
+  ${warn}${warnInfl}
+  <hr class="divider">
+  <h2>Scenario 2026 — sliders</h2>
+  <div class="g2">
+    <div>
+      ${sldr('aoFreq','Frequency 2026 (decimale)',0.02,0.10,0.001,'',S.aoFreq)}
+      ${sldr('aoSev','Severity base 2026 (€)',3000,8000,25,'€',S.aoSev)}
+      ${sldr('aoInfl','Inflazione 2026 (decimale)',-0.02,0.15,0.005,'',S.aoInfl)}
+      ${sldr('aoEur','EURIBOR 3M 2026 (decimale)',-0.01,0.06,0.001,'',S.aoEur)}
+    </div>
+    <div class="g2">
+      <div class="stat"><div class="val">${(S.aoFreq*100).toFixed(3)}%</div><div class="lbl">Frequency</div></div>
+      <div class="stat"><div class="val">${Math.round(S.aoSev).toLocaleString('en-US')} €</div><div class="lbl">Severity base</div></div>
+      <div class="stat info"><div class="val">${Math.round(aoSevAdj).toLocaleString('en-US')} €</div><div class="lbl">Severity adj</div></div>
+      <div class="stat info"><div class="val">${aoLc2026.toFixed(2)} €</div><div class="lbl">LossCost</div></div>
+      <div class="stat"><div class="val">${(S.aoEur*100).toFixed(2)}%</div><div class="lbl">EURIBOR 3M</div></div>
+      <div class="stat"><div class="val">431.8 €</div><div class="lbl">Premio lag1 (2025)</div></div>
+    </div>
+  </div>
+  <hr class="divider">
+  <h2>Confronto modelli Premio</h2>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:8px">★ = Modello attivo · ⭐ = Raccomandato · Modello E = solo diagnostica</div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Mod.</th><th>Variabili</th><th>R²</th><th>R²adj</th><th>RMSE</th><th>MAE</th><th>N</th><th>Pred. 2026</th><th>Azione</th></tr></thead>
+    <tbody>${modelRows}</tbody></table>
+  </div>
+  <div style="margin-top:10px"><button class="btn" onclick="S.aoManualId='';rerender()">Reset auto-selezione</button></div>
+  ${fitSection}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 4 — ADD-ON FREQUENZA
+// ═══════════════════════════════════════════════════════════════════════
+function renderAddonFreq(){
+  const{allAfResults,afBestId,afSim2026}=C;
+  const tableRows=AF_DATA.map(d=>`<tr ${d.y===2020?'class="tr-warn"':''}>
+    <td>${d.y}</td>
+    <td>${d.freq!=null?d.freq.toFixed(3)+'%':'—'}</td>
+    <td>${d.pax!=null?d.pax.toFixed(1):'—'}</td>
+    <td>${d.carb!=null?d.carb.toFixed(2):'—'}</td>
+    <td>${d.stock!=null?d.stock.toFixed(2):'—'}</td>
+    <td>${d.paxIdx!=null?d.paxIdx.toFixed(1):'—'}</td>
+  </tr>`).join('');
+  const modelRows=allAfResults.map(r=>{
+    const isBest=r.id===afBestId;
+    return`<tr class="${isBest?'tr-star':''}">
+      <td>${r.id}${r.rec?' ⭐':''}</td>
+      <td>${r.vars.map(k=>AF_VLBL[k]).join(' + ')||'—'}</td>
+      <td>${r.model?r.model.r2.toFixed(4):'—'}</td>
+      <td>${r.model?r.model.r2a.toFixed(4):'—'}</td>
+      <td>${r.model?r.model.rmse.toFixed(4)+' %':'—'}</td>
+      <td>${r.model?r.model.mae.toFixed(4)+' %':'—'}</td>
+      <td>${r.model?String(r.model.n):'—'}</td>
+      <td>${r.pred26!=null?r.pred26.toFixed(3)+'%':'—'}</td>
+      <td>${r.model?`<button class="btn${isBest?' pri':''}" onclick="S.afManualId='${r.id}';rerender()">Usa</button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+  const best=allAfResults.find(r=>r.id===afBestId);
+  let fitSection='';
+  if(best?.model){
+    const mdl=best.model;
+    const fitYrs=mdl.rows.map(r=>r.y);
+    const obs=mdl.rows.map(r=>r.freq);
+    const yhat=mdl.yhat;
+    const residuals=mdl.residuals||obs.map((o,i)=>o-yhat[i]);
+    fitSection=`<hr class="divider"><h2>Modello attivo: ${best.n}</h2>
+    <div class="g2">
+      <div><h3>Osservato vs Stimato</h3><div class="chart-wrap">${mkFitChart(fitYrs,obs,yhat,'Frequency %')}</div></div>
+      <div><h3>Residui</h3><div class="chart-wrap">${mkResidChart(fitYrs,residuals)}</div></div>
+    </div>`;
+  }
+  return`<div class="callout neut">Add-on — Selezione modello migliore Frequency RC AUTO. Solo variabili dagli Excel forniti (no Trend, no COVID dummy).</div>
+  <h2>Dataset — Variabili disponibili</h2>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Anno</th><th>Freq %</th><th>PaxKm mln</th><th>Carb €/litro</th><th>Stock auto mln</th><th>Trasp/PIL idx</th></tr></thead>
+    <tbody>${tableRows}</tbody></table>
+  </div>
+  <hr class="divider">
+  <h2>Toggle variabili — Modello F (personalizzato)</h2>
+  <div class="chips">
+    ${chip('afAvPax','PaxKm',S.afAvPax)}
+    ${chip('afAvCarb','Carburante',S.afAvCarb)}
+    ${chip('afAvStock','Stock auto',S.afAvStock)}
+    ${chip('afAvPaxIdx','Trasporti/PIL idx',S.afAvPaxIdx)}
+  </div>
+  <div class="callout neut" style="font-size:11px;margin-top:4px">Le variabili 2026 si impostano nel <strong>Simulatore RCA → Blocco A</strong>.</div>
+  <hr class="divider">
+  <h2>Confronto modelli Frequency</h2>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:8px">★ = Modello attivo · ⭐ = Raccomandato</div>
+  <div style="overflow-x:auto">
+    <table><thead><tr><th>Mod.</th><th>Variabili</th><th>R²</th><th>R²adj</th><th>RMSE</th><th>MAE</th><th>N</th><th>Pred. 2026</th><th>Azione</th></tr></thead>
+    <tbody>${modelRows}</tbody></table>
+  </div>
+  <div style="margin-top:10px"><button class="btn" onclick="S.afManualId='';rerender()">Reset auto-selezione</button></div>
+  ${fitSection}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 5 — REGIONALE
+// ═══════════════════════════════════════════════════════════════════════
+function buildRegAOR(region){
+  const piArr=REG_PREMIO[region];if(!piArr)return[];
+  return REG_YEARS.map((y,i)=>{
+    const piYi=REG_PREMIO_YEARS.indexOf(y);
+    const prevYi=REG_PREMIO_YEARS.indexOf(y-1);
+    const raw=_AO_RAW.find(r=>r.y===y);
+    const nat=DATA.find(d=>d.anno===y);
+    const freq=REG[region].freq[i]/100;
+    const sev=REG[region].sev[i];
+    return{y,infl:(nat?.inflazione??0)/100,freq,sev,
+      prem:piYi>=0?(piArr[piYi]??null):null,
+      eur:raw?raw.eur:0,lc:freq*sev,
+      lag1:prevYi>=0?(piArr[prevYi]??null):null};
+  });
+}
+function renderRegionale(){
+  const rg=S.regRegion;const rd=REG[rg];
+  const piArr=REG_PREMIO[rg];
+  const yi=REG_YEARS.indexOf(S.regYear);
+  const piYi=REG_PREMIO_YEARS.indexOf(S.regYear);
+  const regF=rd&&yi>=0?rd.freq[yi]:null;
+  const regS=rd&&yi>=0?rd.sev[yi]:null;
+  const regP=piArr&&piYi>=0?piArr[piYi]:null;
+  const nazD=REG_NAZ[yi]||{freq:null,sev:null};
+  const nazP=REG_PREMIO_NAZ[piYi]??null;
+  // Selectors
+  const regionOpts=REGIONS.map(r=>`<option${r===rg?' selected':''}>${r}</option>`).join('');
+  const yearOpts=REG_YEARS.map(y=>`<option${y===S.regYear?' selected':''}>${y}</option>`).join('');
+  // ── Historical charts for selected region
+  const histYearsP=REG_PREMIO_YEARS;
+  const regPremSeries=[
+    {name:rg,data:piArr??[],color:'#2563eb',w:2,dec:1,unit:'€'},
+    {name:'Italia',data:REG_PREMIO_NAZ,color:'#94a3b8',w:1.5,dashed:true,dec:1,unit:'€'},
+  ];
+  const chartPremReg=mkChart({series:regPremSeries,labels:histYearsP.map(String),W:700,H:220,yLabel:'Premio €'});
+  const chartFreqReg=mkChart({series:[
+    {name:rg,data:rd?.freq??[],color:'#2563eb',w:2,dec:1,unit:'%'},
+    {name:'Italia',data:REG_NAZ.map(r=>r.freq),color:'#94a3b8',w:1.5,dashed:true,dec:2,unit:'%'},
+  ],labels:REG_YEARS.map(String),W:700,H:200,yLabel:'Frequency %'});
+  const chartSevReg=mkChart({series:[
+    {name:rg,data:rd?.sev??[],color:'#f59e0b',w:2,dec:0,unit:'€'},
+    {name:'Italia',data:REG_NAZ.map(r=>r.sev),color:'#94a3b8',w:1.5,dashed:true,dec:0,unit:'€'},
+  ],labels:REG_YEARS.map(String),W:700,H:200,yLabel:'Severity €'});
+  // ── Regression (Blocco B style with regional data)
+  const{aoBest}=C;
+  const regAORRows=buildRegAOR(rg);
+  const varKeys=aoBest?.model?.varKeys??['freq','sev'];
+  const fitRows=regAORRows.filter(d=>d.prem!==null&&varKeys.every(k=>aoGV(d,k)!==null));
+  let regSection='';
+  if(fitRows.length<varKeys.length+2){
+    regSection=`<div class="callout warn">Dati insufficienti (${fitRows.length} obs.) per variabili: ${varKeys.map(k=>AO_VLBL[k]).join(', ')}.</div>`;
+  } else {
+    const regOls=ols(fitRows.map(d=>varKeys.map(k=>aoGV(d,k))),fitRows.map(d=>d.prem));
+    if(!regOls){regSection=`<div class="callout err">OLS non disponibile.</div>`}
+    else{
+      const lastFit=fitRows[fitRows.length-1];
+      const lastRealP=lastFit?.prem??null;
+      const xs=varKeys.map(k=>aoGV(lastFit,k));
+      let predLast=null;
+      if(xs.every(v=>v!==null)){let p=regOls.b[0];xs.forEach((v,i)=>{p+=regOls.b[i+1]*v});predLast=p}
+      // 2026 prediction
+      const regSevAdj2026=S.regSev2026*(1+S.inflazione/100);
+      const regLc2026=(S.regFreq2026/100)*regSevAdj2026;
+      const regLag1_2026=piArr?.[REG_PREMIO_YEARS.indexOf(2025)]??piArr?.[piArr.length-1]??0;
+      const regSim2026={freq:S.regFreq2026/100,sev:regSevAdj2026,lc:regLc2026,lag1:regLag1_2026,eur:S.euriborB/100,inflD:S.inflazione/100};
+      let pred2026=regOls.b[0];varKeys.forEach((k,i)=>{pred2026+=regOls.b[i+1]*regSim2026[k]});
+      const fitYrs=fitRows.map(r=>r.y);
+      const obs=fitRows.map(r=>r.prem);
+      const yhat=regOls.yhat;
+      const coefRows=[`<tr><td>Intercetta</td><td>${regOls.b[0].toFixed(2)}</td><td>—</td></tr>`,...varKeys.map((k,i)=>`<tr><td>${AO_VLBL[k]}</td><td>${regOls.b[i+1].toFixed(4)}</td><td>${regOls.b[i+1]>=0?'+':'−'}</td></tr>`)];
+      regSection=`<div class="callout info">
+        <strong>Modello: ${aoBest?.n??'Premio ~ Frequency + Severity'}</strong><br>
+        Variabili regionali: Frequency, Severity, LossCost, Premio (Y e lag1).<br>
+        Variabili nazionali: EURIBOR 3M (${S.euriborB.toFixed(3)}%), Inflazione (${S.inflazione}%).
+      </div>
+      <div class="g2">
+        <div>
+          <table><thead><tr><th>Metrica</th><th>Valore</th></tr></thead><tbody>
+            <tr><td>Modello attivo</td><td>${aoBest?.n??'Default'}</td></tr>
+            <tr><td>Variabili</td><td>${varKeys.map(k=>AO_VLBL[k]).join(' + ')}</td></tr>
+            <tr><td>N osservazioni</td><td>${regOls.n}</td></tr>
+            <tr><td>Periodo</td><td>${fitYrs[0]}–${fitYrs[fitYrs.length-1]}</td></tr>
+            <tr><td>R²</td><td>${regOls.r2.toFixed(4)}</td></tr>
+            <tr><td>R² adj</td><td>${regOls.r2a.toFixed(4)}</td></tr>
+            <tr><td>RMSE</td><td>${regOls.rmse.toFixed(1)} €</td></tr>
+            <tr><td>MAE</td><td>${regOls.mae.toFixed(1)} €</td></tr>
+          </tbody></table>
+          <h3 style="margin-top:12px">Coefficienti</h3>
+          <table><thead><tr><th>Variabile</th><th>Coeff.</th><th>Segno</th></tr></thead><tbody>${coefRows.join('')}</tbody></table>
+        </div>
+        <div>
+          <h3>Storico: Osservato vs Stimato</h3>
+          <div class="chart-wrap">${mkFitChart(fitYrs,obs,yhat,'Premio €')}</div>
+          ${predLast!=null&&lastRealP!=null?`<div class="g3" style="margin-top:10px">
+            <div class="stat suc"><div class="val">${lastRealP.toFixed(1)} €</div><div class="lbl">Reale ${lastFit.y}</div></div>
+            <div class="stat info"><div class="val">${predLast.toFixed(1)} €</div><div class="lbl">Stimato ${lastFit.y}</div></div>
+            <div class="stat"><div class="val">${(lastRealP-predLast>=0?'+':'')+(lastRealP-predLast).toFixed(1)} €</div><div class="lbl">Residuo</div></div>
+          </div>`:''}
+        </div>
+      </div>
+      <hr class="divider">
+      <h3>Simulazione Premio 2026 — ${rg}</h3>
+      <div class="callout warn">
+        Sposta i cursori regionali per simulare il 2026. EURIBOR e Inflazione sono condivisi con il Simulatore RCA.<br>
+        Premio lag1 = Premio 2025 ${rg} = <strong>${regLag1_2026.toFixed(1)} €</strong>
+      </div>
+      <div class="g2">
+        <div>
+          ${sldr('regFreq2026',`Frequency 2026 — ${rg} (%)`,1,12,0.1,'%',S.regFreq2026)}
+          ${sldr('regSev2026',`Severity 2026 — ${rg} (€, pre-infl.)`,1000,4000,10,'€',S.regSev2026)}
+          <div style="font-size:11px;color:var(--text2);margin-top:6px">Severity adj: ${regSevAdj2026.toFixed(0)} € | LossCost: ${regLc2026.toFixed(1)} € | EURIBOR: ${S.euriborB.toFixed(3)}%</div>
+          <button class="btn" style="margin-top:8px" onclick="S.regFreq2026=${rd?.freq[rd.freq.length-1]??6};S.regSev2026=${rd?.sev[rd.sev.length-1]??2000};rerender()">Reset a valori 2023</button>
+        </div>
+        <div class="g3">
+          <div class="stat suc"><div class="val">${Math.round(pred2026).toLocaleString('en-US')} €</div><div class="lbl">Premio 2026 stim. — ${rg}</div></div>
+          <div class="stat"><div class="val">${regLag1_2026.toFixed(1)} €</div><div class="lbl">Premio 2025 (lag1)</div></div>
+          <div class="stat${pred2026-regLag1_2026>0?' warn':' suc'}"><div class="val">${(pred2026-regLag1_2026>=0?'+':'')+(pred2026-regLag1_2026).toFixed(1)} €</div><div class="lbl">Δ vs 2025</div></div>
+        </div>
+      </div>`;
+    }
+  }
+  // ── Cross-regional scatter for selected year
+  const scatYi=REG_YEARS.indexOf(S.regYear);
+  const scatPiYi=REG_PREMIO_YEARS.indexOf(S.regYear);
+  let scatSection='';
+  if(scatYi>=0&&scatPiYi>=0){
+    const pts=REGIONS.map(r=>({x:REG[r].freq[scatYi],y:REG_PREMIO[r]?.[scatPiYi]??null,lbl:r})).filter(p=>p.y!=null);
+    scatSection=`<hr class="divider"><h3>Scatter cross-regionale — Frequency vs Premio (${S.regYear})</h3>
+    <div class="chart-wrap">${mkScatter(pts,null,'Frequency (%)','Premio (€)',700,280)}</div>`;
+  }
+  // Overview table
+  const ovRows=REGIONS.map(r=>{
+    const yiR=REG_YEARS.indexOf(S.regYear);
+    const piYiR=REG_PREMIO_YEARS.indexOf(S.regYear);
+    const f=REG[r]?.freq[yiR];const s=REG[r]?.sev[yiR];const p=REG_PREMIO[r]?.[piYiR];
+    return`<tr class="${r===rg?'tr-star':''}"><td>${r}</td><td>${f!=null?f.toFixed(1)+'%':'—'}</td><td>${s!=null?s.toLocaleString('en-US'):'—'}</td><td>${p!=null?p.toFixed(1)+' €':'—'}</td></tr>`;
+  }).join('');
+  return`<div class="row" style="margin-bottom:14px">
+    <label style="font-size:13px;font-weight:600">Regione:</label>
+    <select onchange="S.regRegion=this.value;rerender()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">${regionOpts}</select>
+    <label style="font-size:13px;font-weight:600;margin-left:10px">Anno:</label>
+    <select onchange="S.regYear=+this.value;rerender()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px">${yearOpts}</select>
+  </div>
+  <!-- Stats -->
+  <div class="g4" style="margin-bottom:14px">
+    <div class="stat"><div class="val">${nazD.freq!=null?nazD.freq.toFixed(2)+'%':'—'}</div><div class="lbl">Freq Italia ${S.regYear}</div></div>
+    <div class="stat"><div class="val">${nazD.sev!=null?nazD.sev.toLocaleString('en-US')+' €':'—'}</div><div class="lbl">Sev Italia ${S.regYear}</div></div>
+    <div class="stat info"><div class="val">${regF!=null?regF.toFixed(1)+'%':'—'}</div><div class="lbl">Freq ${rg}</div></div>
+    <div class="stat info"><div class="val">${regS!=null?regS.toLocaleString('en-US')+' €':'—'}</div><div class="lbl">Sev ${rg}</div></div>
+    ${regP!=null?`<div class="stat info"><div class="val">${regP.toFixed(1)} €</div><div class="lbl">Premio ${rg} ${S.regYear}</div></div>`:''}
+    ${nazP!=null?`<div class="stat"><div class="val">${nazP.toFixed(1)} €</div><div class="lbl">Premio Italia ${S.regYear}</div></div>`:''}
+  </div>
+  <!-- Historical charts -->
+  <div class="card">
+    <h3>Premio storico (€) — ${rg} vs Italia</h3>
+    <div class="chart-wrap">${chartPremReg}</div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>Frequency (%) — ${rg} vs Italia</h3><div class="chart-wrap">${chartFreqReg}</div></div>
+    <div class="card"><h3>Severity (€) — ${rg} vs Italia</h3><div class="chart-wrap">${chartSevReg}</div></div>
+  </div>
+  <!-- Overview table -->
+  <div class="card">
+    <h3>Tutte le regioni — ${S.regYear}</h3>
+    <div style="overflow-x:auto"><table><thead><tr><th>Regione</th><th>Frequency</th><th>Severity €</th><th>Premio €</th></tr></thead><tbody>${ovRows}</tbody></table></div>
+  </div>
+  <!-- Regional regression -->
+  <div class="card">
+    <h2>Regressione regionale Premio (${rg}) — struttura Blocco B</h2>
+    ${regSection}
+  </div>
+  ${scatSection?`<div class="card">${scatSection}</div>`:''}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TAB 6 — PROVA REGRESSIONI (LAB)
+// ═══════════════════════════════════════════════════════════════════════
+function renderLab(){
+  const labVars=[
+    // ── Variabili da DATA (nazionali)
+    {key:'premio',    lbl:'Premio (€)',          data:DATA.filter(d=>d.premio!=null).map(d=>({y:d.anno,v:d.premio}))},
+    {key:'frequency', lbl:'Frequency (%)',        data:DATA.filter(d=>d.frequency!=null).map(d=>({y:d.anno,v:d.frequency}))},
+    {key:'severity',  lbl:'Severity (€)',         data:DATA.filter(d=>d.severity!=null).map(d=>({y:d.anno,v:d.severity}))},
+    {key:'inflazione',lbl:'Inflazione (%)',        data:DATA.filter(d=>d.inflazione!=null).map(d=>({y:d.anno,v:d.inflazione}))},
+    {key:'carburante',lbl:'Carburante (€/litro)', data:DATA.filter(d=>d.carburante!=null).map(d=>({y:d.anno,v:d.carburante}))},
+    {key:'paxKm',     lbl:'PaxKm (mln)',          data:DATA.filter(d=>d.paxKm!=null).map(d=>({y:d.anno,v:d.paxKm}))},
+    {key:'brent',     lbl:'Brent ($/barile)',      data:DATA.filter(d=>d.brent!=null).map(d=>({y:d.anno,v:d.brent}))},
+    // ── Variabili da MOB_DATA (mobilità)
+    {key:'stock',     lbl:'Stock auto (mln)',      data:MOB_DATA.filter(d=>d.stock!=null).map(d=>({y:d.y,v:d.stock}))},
+    {key:'paxIdx',    lbl:'Trasporti/PIL idx',     data:MOB_DATA.filter(d=>d.paxIdx!=null).map(d=>({y:d.y,v:d.paxIdx}))},
+    // ── Variabili da AO_DATA (modello premio)
+    {key:'lc',        lbl:'LossCost (€)',          data:AO_DATA.filter(d=>d.lc!=null&&d.prem!=null).map(d=>({y:d.y,v:d.lc}))},
+    {key:'lag1',      lbl:'Premio lag1 (€)',        data:AO_DATA.filter(d=>d.lag1!=null&&d.prem!=null).map(d=>({y:d.y,v:d.lag1}))},
+    {key:'eur',       lbl:'EURIBOR 3M',            data:AO_DATA.filter(d=>d.eur!=null).map(d=>({y:d.y,v:d.eur}))},
+  ];
+  const yOpts=labVars.map(v=>`<option value="${v.key}"${S.labY===v.key?' selected':''}>${v.lbl}</option>`).join('');
+  const xChips=labVars.filter(v=>v.key!==S.labY).map(v=>`<button class="chip${S.labX.includes(v.key)?' on':''}" onclick="labToggleX('${v.key}')">${S.labX.includes(v.key)?'●':'○'} ${v.lbl}</button>`).join('');
+  // Run regression
+  let result='';
+  if(S.labX.length>0){
+    const yVarDef=labVars.find(v=>v.key===S.labY);
+    const xVarDefs=S.labX.map(k=>labVars.find(v=>v.key===k)).filter(Boolean);
+    const yYrs=new Set(yVarDef.data.map(d=>d.y));
+    const xYrSets=xVarDefs.map(v=>new Set(v.data.map(d=>d.y)));
+    const commonYrs=[...yYrs].filter(y=>xYrSets.every(s=>s.has(y))).sort();
+    if(commonYrs.length<S.labX.length+2){
+      result=`<div class="callout err">Dati insufficienti (${commonYrs.length} anni comuni) per ${S.labX.length} predittori.</div>`;
+    } else {
+      const yArr=commonYrs.map(y=>yVarDef.data.find(d=>d.y===y).v);
+      const XArr=commonYrs.map(y=>xVarDefs.map(v=>v.data.find(d=>d.y===y).v));
+      const mdl=ols(XArr,yArr);
+      if(!mdl){result=`<div class="callout err">Regressione non disponibile (matrice singolare?).</div>`}
+      else{
+        const coefRows=[`<tr><td>Intercetta</td><td>${mdl.b[0].toFixed(4)}</td><td>—</td></tr>`,...S.labX.map((k,i)=>{const lbl=labVars.find(v=>v.key===k)?.lbl||k;return`<tr><td>${lbl}</td><td>${mdl.b[i+1].toFixed(5)}</td><td>${mdl.b[i+1]>=0?'+':'−'}</td></tr>`})];
+        const residuals=mdl.residuals||yArr.map((y,i)=>y-mdl.yhat[i]);
+        result=`<div class="g2">
+          <div>
+            <h3>Metriche</h3>
+            <table><thead><tr><th>Metrica</th><th>Valore</th></tr></thead><tbody>
+              <tr><td>Y</td><td>${yVarDef.lbl}</td></tr>
+              <tr><td>X</td><td>${S.labX.map(k=>labVars.find(v=>v.key===k)?.lbl||k).join(', ')}</td></tr>
+              <tr><td>N</td><td>${mdl.n} (anni: ${commonYrs[0]}–${commonYrs[commonYrs.length-1]})</td></tr>
+              <tr><td>R²</td><td>${mdl.r2.toFixed(4)}</td></tr>
+              <tr><td>R² adj</td><td>${mdl.r2a.toFixed(4)}</td></tr>
+              <tr><td>RMSE</td><td>${mdl.rmse.toFixed(4)}</td></tr>
+              <tr><td>MAE</td><td>${mdl.mae.toFixed(4)}</td></tr>
+            </tbody></table>
+            <h3 style="margin-top:14px">Coefficienti</h3>
+            <table><thead><tr><th>Variabile</th><th>Coeff.</th><th>Segno</th></tr></thead><tbody>${coefRows.join('')}</tbody></table>
+          </div>
+          <div>
+            <h3>Osservato vs Stimato</h3>
+            <div class="chart-wrap">${mkFitChart(commonYrs,yArr,mdl.yhat,yVarDef.lbl)}</div>
+            <h3 style="margin-top:14px">Residui</h3>
+            <div class="chart-wrap">${mkResidChart(commonYrs,residuals)}</div>
+          </div>
+        </div>`;
+      }
+    }
+  }
+  return`<div class="callout neut">Seleziona Y e una o più X per eseguire una regressione OLS personalizzata.</div>
+  <div class="g2">
+    <div class="card">
+      <h3>Variabile dipendente (Y)</h3>
+      <select onchange="S.labY=this.value;S.labX=[];rerender()" style="width:100%;padding:7px;border:1px solid var(--border);border-radius:6px;font-size:13px">${yOpts}</select>
+    </div>
+    <div class="card">
+      <h3>Variabili indipendenti (X) — seleziona una o più</h3>
+      <div class="chips">${xChips}</div>
+      ${S.labX.length>0?`<button class="btn" onclick="S.labX=[];rerender()" style="margin-top:6px">Reset X</button>`:''}
+    </div>
+  </div>
+  ${result||'<div class="card" style="color:var(--text3);font-size:13px;text-align:center;padding:40px">Seleziona almeno una variabile X per eseguire la regressione</div>'}`;
+}
+function labToggleX(k){if(S.labX.includes(k))S.labX=S.labX.filter(x=>x!==k);else S.labX=[...S.labX,k];rerender()}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MAIN RENDER
+// ═══════════════════════════════════════════════════════════════════════
+const TABS=[
+  {id:'simulator',lbl:'Simulatore RCA'},
+  {id:'models',lbl:'Spiegazione modelli'},
+  {id:'addon',lbl:'Add-on Premio'},
+  {id:'addonfreq',lbl:'Add-on Frequenza'},
+  {id:'regionale',lbl:'Regionale'},
+  {id:'lab',lbl:'Prova Regressioni'},
+];
+function rerender(){
+  compute();
+  // Restore slider values after render (prevent jank)
+  const savedFocus=document.activeElement?.getAttribute('data-slider');
+  const savedVal=savedFocus?S[savedFocus]:null;
+  // Nav
+  document.getElementById('main-nav').innerHTML=TABS.map(t=>`<button class="${S.page===t.id?'active':''}" onclick="S.page='${t.id}';rerender()">${t.lbl}</button>`).join('')+`<button onclick="exportExcel()" style="margin-left:auto;background:#16a34a;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer">⬇ Esporta Excel</button>`;
+  // Content
+  let html='';
+  if(S.page==='simulator')html=renderSimulator();
+  else if(S.page==='models')html=renderModels();
+  else if(S.page==='addon')html=renderAddon();
+  else if(S.page==='addonfreq')html=renderAddonFreq();
+  else if(S.page==='regionale')html=renderRegionale();
+  else if(S.page==='lab')html=renderLab();
+  document.getElementById('content').innerHTML=html;
+  // Restore slider values from state
+  document.querySelectorAll('input[data-slider]').forEach(el=>{
+    el.value=S[el.getAttribute('data-slider')];
+  });
+  // Restore focus if still present
+  if(savedFocus&&savedVal!==null){
+    const el=document.querySelector(`input[data-slider="${savedFocus}"]`);
+    if(el){el.focus();el.value=S[savedFocus]}
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════════════════════════════
+document.addEventListener('mousemove',e=>{
+  const el=e.target.closest('[data-tip]');
+  const tt=document.getElementById('tt');
+  if(el){
+    tt.innerHTML=el.getAttribute('data-tip').replace(/\n/g,'<br>');
+    tt.style.display='block';
+    tt.style.left=(e.clientX+14)+'px';
+    tt.style.top=(e.clientY-10)+'px';
+  } else {tt.style.display='none'}
+});
+document.addEventListener('mouseleave',()=>{document.getElementById('tt').style.display='none'},true);
+
+// ═══════════════════════════════════════════════════════════════════════
+// EXPORT EXCEL
+// ═══════════════════════════════════════════════════════════════════════
+function exportExcel(){
+  compute();
+  const wb=XLSX.utils.book_new();
+
+  // ── helper: add a sheet from array-of-arrays
+  function addSheet(name,rows){
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  }
+
+  // ── BLOCCO A (Frequency Add-on best model)
+  const af=C.afBest;
+  const afRows=[['BLOCCO A — Modello Frequenza RC AUTO'],['']];
+  if(af?.model){
+    afRows.push(['Modello',af.n]);
+    afRows.push(['Variabili',af.vars.map(k=>AF_VLBL[k]).join(' + ')]);
+    afRows.push(['N osservazioni',af.model.n]);
+    afRows.push(['R²',af.model.r2]);
+    afRows.push(['R² adj.',af.model.r2a]);
+    afRows.push(['RMSE (%)',af.model.rmse]);
+    afRows.push(['MAE (%)',af.model.mae]);
+    afRows.push(['']);
+    afRows.push(['Coefficienti','','']);
+    afRows.push(['Variabile','Coefficiente','']);
+    afRows.push(['Intercetta',af.model.b[0],'']);
+    af.vars.forEach((k,i)=>afRows.push([AF_VLBL[k],af.model.b[i+1],'']));
+    afRows.push(['']);
+    // Historical data + fitted
+    const hdr=['Anno','Freq % (osservato)','Freq % (stimato)','Residuo'];
+    afRows.push(hdr);
+    af.model.rows.forEach((r,i)=>{
+      const obs=r.freq;
+      const yhat=af.model.yhat[i];
+      const res=obs-yhat;
+      afRows.push([r.y,obs,yhat,res]);
+    });
+    afRows.push(['']);
+    afRows.push(['Stima 2026',C.predF0??'N/D']);
+  } else {
+    afRows.push(['Nessun modello Add-on Freq disponibile.']);
+  }
+  addSheet('Blocco A - Frequency',afRows);
+
+  // ── BLOCCO B (Premio Add-on best model)
+  const ao=C.aoBest;
+  const aoRows=[['BLOCCO B — Modello Premio RC AUTO'],['']];
+  if(ao?.model){
+    aoRows.push(['Modello',ao.n]);
+    aoRows.push(['Variabili',ao.vars.map(k=>AO_VLBL[k]).join(' + ')]);
+    aoRows.push(['N osservazioni',ao.model.n]);
+    aoRows.push(['R²',ao.model.r2]);
+    aoRows.push(['R² adj.',ao.model.r2a]);
+    aoRows.push(['RMSE (€)',ao.model.rmse]);
+    aoRows.push(['MAE (€)',ao.model.mae]);
+    aoRows.push(['']);
+    aoRows.push(['Coefficienti','','']);
+    aoRows.push(['Variabile','Coefficiente','']);
+    aoRows.push(['Intercetta',ao.model.b[0],'']);
+    ao.vars.forEach((k,i)=>aoRows.push([AO_VLBL[k],ao.model.b[i+1],'']));
+    aoRows.push(['']);
+    aoRows.push(['Nota: Inflazione non è regressore diretto. Severity adj = Severity × (1 + inflazione)']);
+    aoRows.push(['']);
+    // Historical data + fitted
+    const hdrAo=['Anno','Premio € (osservato)','Premio € (stimato)','Residuo'];
+    aoRows.push(hdrAo);
+    ao.model.rows.forEach((r,i)=>{
+      const obs=r.prem;
+      const yhat=ao.model.yhat[i];
+      const res=obs-yhat;
+      aoRows.push([r.y,obs,yhat,res]);
+    });
+    aoRows.push(['']);
+    aoRows.push(['Stima 2026 (con slider correnti)',C.pred26main??'N/D']);
+    aoRows.push(['  Severity adj. usata',C.mainSevAdj??'N/D']);
+    aoRows.push(['  Frequency dec. usata',C.mainFreqDec??'N/D']);
+    aoRows.push(['  EURIBOR usato (%)',S.euriborB]);
+  } else {
+    aoRows.push(['Nessun modello Add-on Premio disponibile.']);
+  }
+  addSheet('Blocco B - Premio',aoRows);
+
+  // ── CONFRONTO MODELLI FREQUENCY
+  const afCompRows=[['CONFRONTO MODELLI — FREQUENCY'],['']];
+  afCompRows.push(['Modello','Variabili','R²','R² adj.','RMSE (%)','MAE (%)','N','Stima 2026 (%)','Selezionato']);
+  C.allAfResults.forEach(r=>{
+    afCompRows.push([
+      r.n, r.vars.map(k=>AF_VLBL[k]).join(' + '),
+      r.model?r.model.r2:'—', r.model?r.model.r2a:'—',
+      r.model?r.model.rmse:'—', r.model?r.model.mae:'—',
+      r.model?r.model.n:'—',
+      r.pred26??'—',
+      r.id===C.afBestId?'★':'',
+    ]);
+  });
+  addSheet('Confronto Modelli Freq',afCompRows);
+
+  // ── CONFRONTO MODELLI PREMIO
+  const aoCompRows=[['CONFRONTO MODELLI — PREMIO'],['']];
+  aoCompRows.push(['Modello','Variabili','R²','R² adj.','RMSE (€)','MAE (€)','N','Stima 2026 (€)','Selezionato']);
+  C.allAoResults.forEach(r=>{
+    aoCompRows.push([
+      r.n, r.vars.map(k=>AO_VLBL[k]).join(' + '),
+      r.model?r.model.r2:'—', r.model?r.model.r2a:'—',
+      r.model?r.model.rmse:'—', r.model?r.model.mae:'—',
+      r.model?r.model.n:'—',
+      r.pred26??'—',
+      r.id===C.aoBestId?'★':'',
+    ]);
+  });
+  addSheet('Confronto Modelli Premio',aoCompRows);
+
+  // ── DATI STORICI COMPLETI
+  const dataRows=[['SERIE STORICA — DATI NAZIONALI'],['']];
+  dataRows.push(['Anno','Frequency (%)','Severity (€)','Premio (€)','Carburante (€/litro)','PaxKm (mln)','Brent ($/bbl)','Inflazione (%)','EURIBOR 3M','LossCost','Stock auto (mln)','Trasp/PIL idx']);
+  DATA.forEach(d=>{
+    const ao=AO_DATA.find(r=>r.y===d.anno);
+    const mob=MOB_DATA.find(m=>m.y===d.anno);
+    dataRows.push([
+      d.anno, d.frequency, d.severity, d.premio,
+      d.carburante, d.paxKm, d.brent, d.inflazione,
+      ao?.eur??null, ao?.lc??null,
+      mob?.stock??null, mob?.paxIdx??null,
+    ]);
+  });
+  addSheet('Dati Storici',dataRows);
+
+  // ── save
+  const date=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  XLSX.writeFile(wb,`RCA_Regressioni_${date}.xlsx`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+rerender();
+</script>
+</body>
+</html>
